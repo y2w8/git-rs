@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}{{ repo.name }} — {{ repo.description }}{% endblock %}
+
+{% block header %}
+  {{ macros::header(Some(repo), branch_names, Some(current_ref)) }}
+{% endblock %}
+
+{% block tabs %}
+  {{ macros::repo_tabs(repo, current_ref, query, "refs") }}
+{% endblock %}
+
+{% block content %}
+  <table>
+    {% if !branches.is_empty() %}
+      {{ macros::branches(branches, branches_has_more, has_prev, page, mode) }}
+    {% endif %}
+
+    {% if !tags.is_empty() %}
+      {{ macros::tags(tags, tags_has_more, has_prev, page, mode) }}
+    {% endif %}
+  </table>
+{% endblock %}

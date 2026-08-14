@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ repo.name }} — {{ repo.description }}{% endblock %}
+
+{% block header %}
+  {{ macros::header(Some(repo), branch_names, Some(current_ref)) }}
+{% endblock %}
+
+{% block tabs %}
+  {{ macros::repo_tabs(repo, current_ref, query, "tree") }}
+{% endblock %}
+
+{% decl parameters %}
+{% if !current_ref.is_head %}
+{% let parameters %}?h={{ current_ref.name }}{% endlet %}
+{% else %}
+{% let parameters = "".to_string() %}
+{% endif %}
+
+{% block breadcrumb %}
+  <div class="tree-breadcrumb">
+    <a href="/{{ repo.name }}/tree/{{ parameters }}">{{ repo.name }}</a>
+    {% for crumb in breadcrumbs %}
+    /
+    <a href="/{{ repo.name }}/tree/{{ crumb.path }}{{ parameters }}">{{ crumb.name }}</a>
+    {% endfor %}
+  </div>
+{% endblock %}
+
+{% block content %}
+  {% match kind %}
+    {% when PathView::Tree(entries) %}
+      <table class="tree-table">
+        <thead>
+          <tr>
+            <th class="mode">Mode</th>
+            <th>Name</th>
+            <th>Size</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if let Some(up) = parent_path %}
+            <tr class="tree-parent">
+              <td></td>
+              <td><a href="/{{ repo.name }}/tree/{{ up }}{{ parameters }}">..</a></td>
+              <td></td>
+            </tr>
+          {% endif %}
+          {% for entry in entries %}
+            <tr>
+              <td class="mode">{{ entry.mode_display() }}</td>
+              <td>
+                {% match entry.kind %}
+                  {% when EntryKind::Tree %}
+                    <a class="folder" href="/{{ repo.name }}/tree/{{ entry.path }}/{{ parameters }}">{{ entry.name }}</a>
+                  {% when EntryKind::Commit %}
+                    <span class="submodule">{{ entry.name }} @ {{ entry.id }}</span>
+                  {% when _ %}
+                    <a href="/{{ repo.name }}/tree/{{ entry.path }}{{ parameters }}">{{ entry.name }}</a>
+                {% endmatch %}
+              </td>
+              <td class="size">{{ entry.size_display() }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% when PathView::Blob(blob) %}
+      <div class="blob-meta">
+        <span class="mode">{{ blob.mode_display() }}</span>
+        <span class="blob-id">blob {{ blob.id }}</span>
+        <span class="size">{{ blob.size }} bytes</span>
+        (<a href="/{{ repo.name }}/raw/{{ filepath }}?h={{ current_ref.name }}">plain</a>)
+      </div>
+      {% if let Some(lines) = blob.lines %}
+        <table class="blob-table">
+          <tbody>
+            {% for line in lines %}
+              <tr>
+                <td class="line-no">{{ loop.index }}</td>
+                <td class="line-content"><pre>{{ line }}</pre></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p>Binary file not shown. <a href="/{{ repo.name }}/raw/{{ filepath }}?h={{ current_ref.name }}">Download raw</a>.</p>
+      {% endif %}
+  {% endmatch %}
+{% endblock %}

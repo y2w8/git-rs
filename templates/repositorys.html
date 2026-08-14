@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}y2w8 Repos{% endblock %}
+
+{% block header %}
+  {{ macros::header() }}
+{% endblock %}
+
+{% block tabs %}
+<tr>
+  <td>
+    <a href="/" class="active">index</a>
+    <a href="/about">about</a>
+  </td>
+  <td class="form">
+    <form method="get" action="/">
+      <input type="search" name="v" size="10" value="">
+      <input type="submit" value="search">
+    </form>
+  </td>
+</tr>
+{% endblock %}
+
+{% block content %}
+<table>
+    <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Owner</th>
+          <th>Idle</th>
+          <th>Links</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for repo in repos %}
+        <tr>
+            <td><a href="/{{ repo.name }}/">{{ repo.name }}</a></td>
+            <td><a href="/{{ repo.name }}/">{{ repo.description }}</a></td>
+            <td>{% if let Some(owner) = repo.owner %}{{ owner }}{% endif %}</td>
+            <td>
+              {% let gix_repo = repo.gix() %}
+              {% if let Some(last_commit) = repo.last_commit(gix_repo)? %}
+                {% let time = last_commit.time.format_relative() %}
+                <span class="
+                {% match time.1 %}
+                  {% when Recency::Fresh %}fresh
+                  {% when Recency::Recent %}recent
+                  {% when Recency::Stale %}stale
+                {% endmatch %}
+                "
+                title="{{ last_commit.time.format() }}">
+                  {{ time.0 }}
+                </span>
+              {% else %}
+                <span class="stale">Unknown</span>
+              {% endif %}
+
+            </td>
+            <td><a href="/{{ repo.name }}/">summary</a><a href="/{{ repo.name }}/log/">log</a><a href="/{{ repo.name }}/tree/">tree</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

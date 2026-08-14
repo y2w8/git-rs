@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}{{ repo.name }} — {{ repo.description }}{% endblock %}
+
+{% block header %}
+  {{ macros::header(Some(repo), branch_names, Some(current_ref)) }}
+{% endblock %}
+
+{% block tabs %}
+  {{ macros::repo_tabs(repo, current_ref, query, "log") }}
+{% endblock %}
+
+{% block content %}
+  {% if !commits.is_empty() %}
+    <table>
+      {{ macros::commits(commits, has_next, has_prev, page, "log") }}
+    </table>
+  {% else %}
+    There is no commits!
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{%- import "macros.html" as macros -%}
+
+<!DOCTYPE html>
+<html>
+  <head>
+      <meta charset="utf-8">
+      <title>{% block title %}rsgit{% endblock %}</title>
+      <link rel="stylesheet" href="/static/style.css">
+      <link rel="shortcut icon" href="/static/favicon.ico">
+  </head>
+  <body>
+      <table class="header blob-table">
+        <tbody>
+          {% block header %}{% endblock %}
+        </tbody>
+      </table>
+        <div id="body">
+          {% block body %}
+          <table class="tabs">
+            <thead>
+              {% block tabs %}{% endblock %}
+            </thead>
+          </table>
+          {% block breadcrumb %}{% endblock %}
+
+          <main>
+            {% block content %}{% endblock %}
+          </main>
+          {% endblock %}
+        </div>
+  </body>
+</html>

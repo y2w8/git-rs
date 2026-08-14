@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}{{ repo.name }} — {{ repo.description }}{% endblock %}
+
+{% block header %}
+  {{ macros::header(Some(repo), branch_names, Some(current_ref)) }}
+{% endblock %}
+
+{% block tabs %}
+  {{ macros::repo_tabs(repo, current_ref, query, "commit") }}
+{% endblock %}
+
+{% block content %}
+  <table class="commit-info">
+    <tbody>
+      <tr>
+        <td>author</td>
+        <td>{{ commit.author.name }} &lt;{{ commit.author.email }}&gt;</td>
+        <td>{{ commit.author.time.format() }}</td>
+      </tr>
+      <tr>
+        <td>committer</td>
+        <td>{{ commit.committer.name }} &lt;{{ commit.committer.email }}&gt;</td>
+        <td>{{ commit.committer.time.format() }}</td>
+      </tr>
+      <tr>
+        <td>commit</td>
+        <td colspan="2">
+          <a href="/{{ repo.name }}/commit/?id={{ commit.id }}">{{ commit.id }}</a>
+          <a href="/{{ repo.name }}/patch/?id={{ commit.id }}">[patch]</a>
+        </td>
+      </tr>
+      <tr>
+        <td>tree</td>
+        <td colspan="2"><a href="/{{ repo.name }}/commit/?id={{ commit.id }}">{{ commit.id }}</a></td>
+      </tr>
+      {% for parent in commit.parents %}
+        <tr>
+          <td>parent</td>
+          <td colspan="2"><a href="/{{ repo.name }}/commit/?id={{ parent }}">{{ parent }}</a></td>
+        </tr>
+      {% endfor %}
+      <tr>
+        <td>download</td>
+        {% if let Some(branch) = commit.branch_name(repo)? %}
+        <td colspan="2"><a href="/{{ repo.name }}/snapshot/?h={{ branch }}">{{ branch }}.tar.gz</a></td>
+        {% else %}
+        <td colspan="2"><a href="/{{ repo.name }}/snapshot/?id={{ commit.id }}">{{ commit.id }}.tar.gz</a></td>
+        {% endif %}
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="commit-subject">
+    <h1>{{ commit.summary()? }}
+    {% if commit.is_head(repo)? %}<a href="/{{ repo.name }}/commit/?id={{ commit.id }}" class="badge_head">HEAD</a>{% endif %}
+    {% for branch in commit.branch_tips(repo)? %}
+    <a href="/{{ repo.name }}/log?h={{ branch }}" class="badge_branch">{{ branch }}</a>
+    {% endfor %}
+    </h1>
+    <h4>{{ commit.body()? }}</h4>
+  </div>
+  <h3><a href="/{{ repo.name }}/diff/?id={{ commit.id }}">Diffstat</a></h3>
+  <table class="diffstat">
+  <tbody>
+  {% for file_diff in diff.file_diffs %}
+    <tr>
+      <td class="mode">{{ file_diff.mode }}</td>
+      <td class="upd">
+        <a href="/{{ repo.name }}/diff/{{ file_diff.path }}{% if let Some(id) = query.id %}?id={{ id }}{% endif %}" class="{{ file_diff.state }}">{{ file_diff.path }}</a>
+      </td>
+      <td class="right">{{ file_diff.total }}</td>
+      <td class="graph">
+        <table summary="file diffstat" style="width: {{ file_diff.total_percentage }}%">
+          <tbody>
+            <tr>
+              {% if file_diff.total != 0 %}
+                {% if file_diff.insertions_percentage > 0.0 %}
+                  <td class="diffstat-addition" style="width: {{ file_diff.insertions_percentage }}%;"></td>
+                {% endif %}
+                {% if file_diff.deletions_percentage > 0.0 %}
+                  <td class="diffstat-deletion" style="width: {{ file_diff.deletions_percentage }}%;"></td>
+                {% endif %}
+              {% endif %}
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<pre class="diff">{{ diff.stats }}
+{{ diff.output|safe }}</pre>
+{% endblock %}

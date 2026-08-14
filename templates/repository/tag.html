@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}{{ repo.name }} — {{ repo.description }}{% endblock %}
+
+{% block header %}
+  {{ macros::header(Some(repo), branch_names, Some(current_ref)) }}
+{% endblock %}
+
+{% block tabs %}
+  {{ macros::repo_tabs(repo, current_ref, query, "refs") }}
+{% endblock %}
+
+{% block content %}
+  <table class="commit-info">
+    <tbody>
+      <tr>
+        <td>tag name</td>
+        <td>{{ tag.name }}</td>
+      </tr>
+      <tr>
+        <td>tag date</td>
+        <td>{{ tag.time.format() }}</td>
+      </tr>
+      {% if let Some(tagger) = tag.tagger %}
+        <tr>
+          <td>tagged by</td>
+          <td>{{ tagger.name }} &lt;{{ tagger.email }}&gt;</td>
+        </tr>
+      {% endif %}
+      {% if let Some(tagged_object) = tag.tagged_object %}
+      <tr>
+        <td>tagged object</td>
+        <td>
+        {% match tagged_object %}
+            {% when TaggedObject::Commit with (commit) %}
+              commit <a href="/{{ repo.name }}/commit/?id={{ commit }}">{{ commit|truncate(10) }}</a>
+            {% when TaggedObject::Tree with (tree) %}
+            tree {{ tree }}
+        {% endmatch %}
+        </td>
+      {% endif %}
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="commit-subject">
+    {{ tag.message }}
+  </div>
+{% endblock %}
