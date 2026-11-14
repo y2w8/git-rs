@@ -11,38 +11,24 @@
 {% endblock %}
 
 {% block content %}
-<table>
   {% if !branches.is_empty() %}
-    {{ macros::branches(branches, branches_has_more, false, page, "") }}
+    <table class="section-table">
+      {{ macros::branches(branches, branches_has_more, false, page, "") }}
+    </table>
   {% endif %}
-
-  <tbody>
-    <tr class="no-background">
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-    </tr>
-  </tbody>
 
   {% if !tags.is_empty() %}
-    {{ macros::tags(tags, tags_has_more, false, page, "") }}
+    <table class="section-table">
+      {{ macros::tags(tags, tags_has_more, false, page, "") }}
+    </table>
   {% endif %}
-
-  <tbody>
-    <tr class="no-background">
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-    </tr>
-  </tbody>
 
   {% if !commits.is_empty() %}
-    {{ macros::commits(commits, commits_has_more, false, page, "") }}
+    <table class="section-table">
+      {{ macros::commits(commits, commits_has_more, false, page, "") }}
+    </table>
   {% endif %}
-</table>
 
-<h3>Clone</h3>
-<pre>https://git.y2w8.online/{{ repo.name }}</pre>
+  <h3>Clone</h3>
+  <pre>https://git.y2w8.online/{{ repo.name }}</pre>
 {% endblock %}

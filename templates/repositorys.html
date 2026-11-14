@@ -42,16 +42,7 @@
               {% let gix_repo = repo.gix() %}
               {% if let Some(last_commit) = repo.last_commit(gix_repo)? %}
                 {% let time = last_commit.time.format_relative() %}
-                <span class="
-                {% match time.1 %}
-                  {% when Recency::Fresh %}fresh
-                  {% when Recency::Recent %}recent
-                  {% when Recency::Stale %}stale
-                {% endmatch %}
-                "
-                title="{{ last_commit.time.format() }}">
-                  {{ time.0 }}
-                </span>
+                <span class="{{ time.1 }}" title="{{ last_commit.time.format() }}">{{ time.0 }}</span>
               {% else %}
                 <span class="stale">Unknown</span>
               {% endif %}

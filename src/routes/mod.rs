@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-use crate::{prelude::*, time::Recency};
+use crate::prelude::*;
 
 pub mod about;
 pub mod git;

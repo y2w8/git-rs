@@ -11,13 +11,15 @@
 {% endblock %}
 
 {% block content %}
-  <table>
-    {% if !branches.is_empty() %}
+  {% if !branches.is_empty() %}
+    <table class="section-table">
       {{ macros::branches(branches, branches_has_more, has_prev, page, mode) }}
-    {% endif %}
+    </table>
+  {% endif %}
 
-    {% if !tags.is_empty() %}
+  {% if !tags.is_empty() %}
+    <table class="section-table">
       {{ macros::tags(tags, tags_has_more, has_prev, page, mode) }}
-    {% endif %}
-  </table>
+    </table>
+  {% endif %}
 {% endblock %}

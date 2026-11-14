@@ -32,7 +32,7 @@
       </tr>
       <tr>
         <td>tree</td>
-        <td colspan="2"><a href="/{{ repo.name }}/commit/?id={{ commit.id }}">{{ commit.id }}</a></td>
+        <td colspan="2"><a href="/{{ repo.name }}/tree/?id={{ commit.id }}">{{ commit.tree_id }}</a></td>
       </tr>
       {% for parent in commit.parents %}
         <tr>

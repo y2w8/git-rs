@@ -26,6 +26,7 @@ pub async fn page(
     data: web::Data<App>,
 ) -> Result<HttpResponse, Error> {
     let (name, file_path) = path.into_inner();
+    let file_path = file_path.filter(|p| !p.is_empty());
     let repo = data.get_repo(&name)?;
     let gix_repo = repo.gix();
 

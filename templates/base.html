@@ -1,15 +1,16 @@
 {%- import "macros.html" as macros -%}
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
       <title>{% block title %}rsgit{% endblock %}</title>
       <link rel="stylesheet" href="/static/style.css">
       <link rel="shortcut icon" href="/static/favicon.ico">
   </head>
   <body>
-      <table class="header blob-table">
+      <table class="header">
         <tbody>
           {% block header %}{% endblock %}
         </tbody>

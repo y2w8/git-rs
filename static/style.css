@@ -45,38 +45,45 @@
 }
 
 /* ==========================================================================
-   2. Base & Typography
+   2. Base & Typography (Sharp Corners, Zero Border-Radius)
    ========================================================================== */
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  border-radius: 0;
 }
 
 body {
   font-family: 'Maple Mono NF', monospace;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
   margin: 0;
   background: var(--base);
   color: var(--text);
 }
 
 div#body {
-  padding: 2rem;
+  padding: 1.5rem 2.5rem 3rem;
 }
 
 main {
-  padding: 2rem;
+  padding: 1.25rem 0 0;
   margin: 0 auto;
 }
 
 h1,
 h2,
-h3 {
+h3,
+h4 {
   color: var(--text);
+  margin-top: 1.25rem;
+  margin-bottom: 0.6rem;
 }
 
 a {
   color: var(--peach);
-  padding: 5px;
+  padding: 3px 6px;
   text-decoration: none;
 }
 
@@ -87,23 +94,34 @@ a.active {
   background: var(--peach);
 }
 
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 1px solid var(--peach);
+  outline-offset: 1px;
+}
+
 code {
   background: var(--black2);
   color: var(--green);
   padding: 2px 6px;
+  border: 1px solid var(--surface0);
 }
 
 pre {
   color: var(--text);
-  background: var(--surface0);
-  border: 1px var(--surface1) solid;
-  font-size: 14px;
-  padding: 6px 10px;
+  background: var(--black2);
+  border: 1px solid var(--surface1);
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 0.6rem 0.9rem;
+  overflow-x: auto;
 }
 
 pre code {
   color: var(--text);
-  background: var(--surface0);
+  background: transparent;
+  border: none;
   padding: 0;
 }
 
@@ -113,7 +131,10 @@ pre code {
 table {
   border-collapse: collapse;
   width: 100%;
-  overflow: hidden;
+}
+
+table.section-table {
+  margin-bottom: 1.75rem;
 }
 
 th {
@@ -121,13 +142,15 @@ th {
   white-space: nowrap;
   color: var(--peach);
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid var(--surface1);
 }
 
 td {
   text-align: left;
   white-space: nowrap;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 0.9rem;
 }
 
 td a {
@@ -136,9 +159,14 @@ td a {
 
 td.mode,
 th.mode {
-  width: 10ch;
-  font-family: monospace;
+  width: 11ch;
+  font-family: inherit;
   white-space: nowrap;
+  color: var(--subtext0);
+}
+
+th.mode {
+  color: var(--peach);
 }
 
 tbody tr:nth-child(even) {
@@ -163,58 +191,110 @@ td.form {
   text-align: right;
 }
 
+td.form form {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 td.form input,
 td.form select {
+  font-family: inherit;
+  font-size: 0.85rem;
   color: var(--text);
   background: var(--surface0);
   border: 1px solid var(--surface1);
-  border-radius: 0;
-  padding: 5px;
+  padding: 0.3rem 0.55rem;
+}
+
+td.form input[type="submit"] {
+  cursor: pointer;
+  color: var(--subtext1);
+  background: var(--one_bg2);
+}
+
+td.form input[type="submit"]:hover {
+  color: var(--crust);
+  background: var(--peach);
+  border-color: var(--peach);
 }
 
 /* ==========================================================================
    4. Header & Navigation Tabs
    ========================================================================== */
+table.header {
+  padding: 0.5rem 2.5rem 0;
+}
+
+table.header tr,
+table.header tr:nth-child(odd),
+table.header tr:nth-child(even),
+table.header tr:hover {
+  background: transparent;
+}
+
 td.logo {
-  width: 96px;
-  vertical-align: top;
+  width: 72px;
+  vertical-align: middle;
+  padding: 0.75rem 0.75rem 0.75rem 2rem;
+}
+
+td.logo a:hover {
+  background: transparent;
 }
 
 td.logo img {
-  width: 96px;
-  height: 96px;
+  width: 64px;
+  height: 64px;
+  display: block;
 }
 
 td.main {
-  font-size: 200%;
-  padding-left: 10px;
+  font-size: 1.65rem;
+  font-weight: 600;
+  padding: 0.6rem 0.75rem 0.25rem;
   white-space: nowrap;
 }
 
 td.sub {
   color: var(--subtext0);
-  border-top: solid 2px var(--surface1);
-  padding-left: 10px;
+  border-top: 1px solid var(--surface1);
+  padding: 0.45rem 0.75rem;
+  font-size: 0.9rem;
 }
 
 .tabs {
-  margin-top: 2rem;
   background: var(--black2);
+  border: 1px solid var(--surface0);
+}
+
+.tabs td {
+  padding: 0.5rem 0.75rem;
 }
 
 .tabs a {
   color: var(--text);
+  padding: 0.25rem 0.6rem;
+  margin-right: 0.15rem;
 }
 
 .tree-breadcrumb {
-  background: var(--black2);
-  padding: 5px;
+  background: var(--mantle);
+  border: 1px solid var(--surface0);
+  border-top: none;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.show_more td,
+td.show_more {
+  padding: 0.45rem 0.6rem;
 }
 
 .show_more a,
 .pagination a {
   color: var(--peach);
-  font-size: 18px;
+  font-size: 0.95rem;
 }
 
 .show_more a:hover,
@@ -223,9 +303,8 @@ td.sub {
 }
 
 .pagination {
-  margin-top: 1rem;
+  padding-top: 0.85rem;
   text-align: center;
-  font-size: 20px;
 }
 
 /* ==========================================================================
@@ -237,11 +316,11 @@ td.sub {
 }
 
 .recent {
-  color: var(--overlay1);
+  color: var(--subtext0);
 }
 
 .stale {
-  color: var(--surface2);
+  color: var(--overlay0);
 }
 
 .description {
@@ -249,8 +328,9 @@ td.sub {
   font-style: italic;
 }
 
-.folder {
+a.folder {
   color: var(--peach);
+  font-weight: 600;
 }
 
 .clone-url {
@@ -262,22 +342,27 @@ td.sub {
 
 .badge_head {
   background: var(--crust);
-  color: var(--text);
+  color: var(--red);
   border: 1px solid var(--red);
-  padding: 2px 8px;
+  padding: 1px 6px;
+  margin-left: 0.35rem;
+  font-size: 0.8rem;
 }
 
 .badge_branch {
   background: var(--crust);
-  color: var(--text);
+  color: var(--green);
   border: 1px solid var(--green);
-  padding: 2px 8px;
+  padding: 1px 6px;
+  margin-left: 0.35rem;
+  font-size: 0.8rem;
 }
 
 .badge_branch:hover,
 .badge_head:hover {
-  color: var(--peach);
-  background: var(--crust);
+  color: var(--crust);
+  background: var(--peach);
+  border-color: var(--peach);
 }
 
 .green {
@@ -288,10 +373,17 @@ td.sub {
   color: var(--red);
 }
 
+span.avatar {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
 span.avatar img.inline {
-  width: 20px;
-  height: 20px;
-  vertical-align: top;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--surface1);
 }
 
 span.avatar img.onhover {
@@ -307,6 +399,7 @@ span.avatar:hover > img.onhover {
   position: absolute;
   margin-left: 1.5em;
   background-color: var(--crust);
+  z-index: 10;
 }
 
 /* ==========================================================================
@@ -331,9 +424,10 @@ td.author {
 }
 
 .commit-info {
-  margin-top: 2rem;
-  max-width: fit-content;
-  background: transparent;
+  margin-top: 0.5rem;
+  width: auto;
+  background: var(--black2);
+  border: 1px solid var(--surface0);
 }
 
 .commit-info tr:nth-child(odd),
@@ -343,7 +437,11 @@ td.author {
 }
 
 .commit-info td {
-  padding: 0.20rem 1rem 0.20rem 0;
+  padding: 0.3rem 1rem;
+}
+
+.commit-info td:first-child {
+  color: var(--subtext0);
 }
 
 .commit-info a {
@@ -351,17 +449,22 @@ td.author {
 }
 
 .commit-subject {
-  padding: 1rem 0;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--surface0);
+  margin-bottom: 1rem;
 }
 
 .commit-subject h1 {
-  font-weight: bold;
-  font-size: 120%;
+  font-weight: 600;
+  font-size: 1.15rem;
+  margin: 0.25rem 0;
 }
 
 .commit-subject h4 {
-  font-weight: bold;
-  color: var(--overlay1);
+  font-weight: normal;
+  color: var(--subtext0);
+  white-space: pre-wrap;
+  margin: 0.5rem 0 0;
 }
 
 /* ==========================================================================
@@ -372,10 +475,11 @@ td.author {
   align-items: center;
   gap: 1em;
   padding: 0.5em 0.8em;
-  margin-bottom: 0.5em;
-  background-color: var(--black2);
-  border: 1px solid var(--surface1);
-  font-family: monospace;
+  margin-bottom: 0;
+  background-color: var(--mantle);
+  border: 1px solid var(--surface0);
+  border-bottom: none;
+  font-family: inherit;
   font-size: 0.9em;
 }
 
@@ -399,29 +503,34 @@ td.author {
 .blob-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: monospace;
+  font-family: inherit;
+  background: var(--black2);
+  border: 1px solid var(--surface0);
 }
 
 .blob-table tr:nth-child(odd),
-.blob-table tr:nth-child(even),
-.blob-table tr:hover {
+.blob-table tr:nth-child(even) {
   background-color: transparent;
 }
 
+.blob-table tr:hover {
+  background-color: var(--one_bg);
+}
+
 .blob-table .line-no {
-  width: 4em;
+  width: 4.5em;
   text-align: right;
-  padding: 0 0.8em;
+  padding: 0.05rem 0.75rem;
   color: var(--overlay0);
   user-select: none;
-  border-right: 1px solid var(--surface1);
+  border-right: 1px solid var(--surface0);
   vertical-align: top;
   white-space: nowrap;
 }
 
 .blob-table .line-content {
   width: 100%;
-  padding: 0 0.8em;
+  padding: 0.05rem 0.85rem;
   color: var(--text);
 }
 
@@ -438,14 +547,16 @@ td.author {
    8. Diff & Diffstat
    ========================================================================== */
 table.diffstat {
-  background: var(--surface0);
-  border: 1px var(--surface1) solid;
-  max-width: 50%;
+  background: var(--black2);
+  border: 1px solid var(--surface0);
+  width: auto;
   min-width: 50%;
+  max-width: 100%;
+  margin-bottom: 1rem;
 }
 
 table.diffstat td {
-  padding: 0.2em 0.2em 0.1em 0.1em;
+  padding: 0.3rem 0.65rem;
 }
 
 .diffstat tr,
@@ -459,6 +570,15 @@ table.diffstat td {
 .diffstat .upd,
 .diffstat .right {
   width: 1%;
+}
+
+.diffstat .right {
+  text-align: right;
+  color: var(--subtext0);
+}
+
+.diffstat .graph {
+  min-width: 120px;
 }
 
 a.diffstat-added {
@@ -481,28 +601,34 @@ a.diffstat-changed:hover {
 
 .diffstat-addition {
   background: var(--green);
-  height: 0.5rem;
+  height: 0.45rem;
+  padding: 0 !important;
 }
 
 .diffstat-deletion {
   background: var(--red);
-  height: 0.5rem;
+  height: 0.45rem;
+  padding: 0 !important;
 }
 
 pre.diff {
   color: var(--text);
-  background: none;
-  border: none;
-  font-size: 14px;
-  padding: 0;
+  background: var(--black2);
+  border: 1px solid var(--surface0);
+  font-size: 0.88rem;
+  padding: 0.75rem 1rem;
+  line-height: 1.45;
 }
 
 .diff-hunk {
   color: var(--blue);
+  display: block;
+  margin-top: 0.25rem;
 }
 
 .diff-file-header {
-  font-weight: bold;
+  font-weight: 600;
+  color: var(--subtext1);
 }
 
 .diff-file-header > span > span {
@@ -510,7 +636,7 @@ pre.diff {
 }
 
 .diff-addition {
-  background: #2b3038;
+  background: #243330;
   color: var(--green);
   display: block;
 }
@@ -518,11 +644,11 @@ pre.diff {
 .diff-addition::before {
   content: '+ ';
   display: inline-block;
-  color: #888;
+  color: var(--overlay1);
 }
 
 .diff-deletion {
-  background: #332839;
+  background: #362432;
   color: var(--red);
   display: block;
 }
@@ -530,25 +656,31 @@ pre.diff {
 .diff-deletion::before {
   content: '- ';
   display: inline-block;
-  color: #888;
+  color: var(--overlay1);
 }
 
 .diff-context::before {
   content: '  ';
   display: inline-block;
-  color: #888;
+  color: var(--overlay1);
 }
 
 /* ==========================================================================
    9. Markdown & Readme
    ========================================================================== */
+.readme {
+  background: var(--black2);
+  border: 1px solid var(--surface0);
+  padding: 1.25rem 1.75rem;
+}
+
 .readme h1,
 .readme h2,
 .readme h3,
 .readme h4,
 .readme h5,
 .readme h6 {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .readme h1,
@@ -558,7 +690,7 @@ pre.diff {
 }
 
 .readme p {
-  font-size: 14px;
+  font-size: 0.92rem;
   color: var(--subtext1);
 }
 

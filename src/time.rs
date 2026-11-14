@@ -68,18 +68,28 @@ pub fn format_relative(seconds: i64) -> (String, Recency) {
     let days = diff.num_days();
 
     if secs < 120 {
-        (format!("{} seconds", secs.max(0)), Recency::Fresh)
+        (pluralize(secs.max(0), "second"), Recency::Fresh)
     } else if mins < 120 {
-        (format!("{} minutes", mins), Recency::Fresh)
+        (pluralize(mins, "minute"), Recency::Fresh)
     } else if hours < 48 {
-        (format!("{} hours", hours), Recency::Fresh)
+        (pluralize(hours, "hour"), Recency::Fresh)
     } else if days < 14 {
-        (format!("{} days", days), Recency::Fresh)
+        (pluralize(days, "day"), Recency::Fresh)
+    } else if days < 30 {
+        (pluralize(days / 7, "week"), Recency::Recent)
     } else if days < 60 {
-        (format!("{} month", days / 30), Recency::Recent)
+        (pluralize(days / 30, "month"), Recency::Recent)
     } else if days < 365 {
-        (format!("{} months", days / 30), Recency::Stale)
+        (pluralize(days / 30, "month"), Recency::Stale)
     } else {
-        (format!("{} year", days / 365), Recency::Stale)
+        (pluralize(days / 365, "year"), Recency::Stale)
+    }
+}
+
+fn pluralize(count: i64, unit: &str) -> String {
+    if count == 1 {
+        format!("1 {unit}")
+    } else {
+        format!("{count} {unit}s")
     }
 }
