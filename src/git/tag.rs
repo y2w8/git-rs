@@ -1,11 +1,21 @@
 use anyhow::Context;
-use gix::objs::{Kind, TagRef};
+use gix::objs::Kind;
 
 use crate::prelude::*;
 
 pub enum TaggedObject {
     Commit(String),
     Tree(String),
+}
+
+impl TaggedObject {
+    fn from_kind_and_id(kind: Kind, id: String) -> Option<Self> {
+        match kind {
+            Kind::Commit => Some(Self::Commit(id)),
+            Kind::Tree => Some(Self::Tree(id)),
+            _ => None,
+        }
+    }
 }
 
 pub struct Tag {
@@ -18,70 +28,68 @@ pub struct Tag {
 }
 
 impl Tag {
+    /// Builds a `Tag` from a `refs/tags/*` Git reference.
+    ///
+    /// Git has two types of tags:
+    /// 1. **Annotated tags** (`git tag -a`): store a dedicated Tag object with a tagger, date, and message.
+    /// 2. **Lightweight tags** (`git tag`): just a reference pointing directly at a Commit (no Tag object).
     pub fn from_gix(mut gix: gix::Reference<'_>) -> anyhow::Result<Tag> {
-        let tag = match gix.peel_to_tag() {
-            Ok(tag) => tag.detach().data,
-            Err(error) => Self::lightweight_tag_object_data(&mut gix).with_context(|| {
-                format!("Couldn't get to a tag from the given reference: {error}")
-            })?,
-        };
-        let tag_ref = TagRef::from_bytes(&tag, gix::hash::Kind::shortest())?;
-        let message = tag_ref.message.to_string();
-        let tagged_object = match tag_ref.target_kind {
-            Kind::Commit => Some(TaggedObject::Commit(tag_ref.target.to_string())),
-            Kind::Tree => Some(TaggedObject::Tree(tag_ref.target.to_string())),
-            _ => None,
-        };
+        let name = gix.name().shorten().to_string();
 
-        let time: Time;
-        let mut tagger: Option<GitSignature> = None;
-        if let Some(sig) = tag_ref.tagger()? {
-            tagger = Some(GitSignature::from_gix(sig))
-        }
+        if let Ok(tag_obj) = gix.peel_to_tag() {
+            // Case 1: Annotated tag
+            let tag_ref = tag_obj.decode()?;
+            let message = tag_ref.message.to_string();
+            let tagged_object =
+                TaggedObject::from_kind_and_id(tag_ref.target_kind, tag_ref.target.to_string());
+            let tagger = tag_ref.tagger()?.map(GitSignature::from_gix);
 
-        if let Some(ref tagger) = tagger {
-            time = tagger.time.clone()
+            let time = match &tagger {
+                Some(t) => t.time.clone(),
+                None => Self::commit_time(&mut gix)?,
+            };
+
+            Ok(Tag {
+                name,
+                id: gix.id().to_string(),
+                message,
+                tagger,
+                tagged_object,
+                time,
+            })
         } else {
-            time = Time::new(
-                gix.peel_to_commit()
-                    .with_context(|| "Couldn't get to a commit from the given reference!")?
-                    .time()?,
-            )
-        }
+            // Case 2: Lightweight tag (points directly to a Commit or Tree)
+            let target = gix
+                .follow_to_object()
+                .context("Failed to resolve lightweight tag target")?;
+            let target_kind = target.header()?.kind();
+            let tagged_object = TaggedObject::from_kind_and_id(target_kind, target.to_string());
+            let time = Self::commit_time(&mut gix)?;
 
-        Ok(Tag {
-            name: gix.name().shorten().to_string(),
-            id: gix.id().to_string(),
-            message,
-            tagger,
-            tagged_object,
-            time,
-        })
+            Ok(Tag {
+                name,
+                id: gix.id().to_string(),
+                message: String::new(),
+                tagger: None,
+                tagged_object,
+                time,
+            })
+        }
     }
 
-    fn lightweight_tag_object_data(reference: &mut gix::Reference) -> anyhow::Result<Vec<u8>> {
-        let target = reference
-            .follow_to_object()
-            .context("Failed to resolve lightweight tag target")?;
-        let tag_name = reference.name().shorten();
-        let target_kind = target.header()?.kind();
-
-        if target_kind == Kind::Tag {
-            anyhow::bail!("reference resolves to an annotated tag object");
-        }
-
-        Ok(format!("object {target}\ntype {target_kind}\ntag {tag_name}\n\n").into_bytes())
+    fn commit_time(gix: &mut gix::Reference<'_>) -> anyhow::Result<Time> {
+        let commit = gix
+            .peel_to_commit()
+            .context("Couldn't get to a commit from the given reference!")?;
+        Ok(Time::new(commit.time()?))
     }
 }
 
 impl Repository {
     pub fn find_tag(&self, name: &str) -> anyhow::Result<Tag> {
         let gix_repo = self.gix();
-        Tag::from_gix(
-            gix_repo
-                .find_reference(&format!("tags/{}", name))?
-                .to_owned(),
-        )
+        let reference = gix_repo.find_reference(&format!("tags/{name}"))?;
+        Tag::from_gix(reference)
     }
 
     pub fn tags(&self, offset: usize, limit: usize) -> anyhow::Result<(Vec<Tag>, bool)> {
@@ -98,7 +106,7 @@ impl Repository {
                 break;
             }
 
-            let rev = rev.unwrap();
+            let rev = rev.map_err(|e| anyhow::anyhow!(e))?;
             tags.push(Tag::from_gix(rev)?);
         }
         Ok((tags, has_next))

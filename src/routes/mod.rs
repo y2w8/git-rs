@@ -26,6 +26,32 @@ pub struct PageQuery {
     pub offset: Option<usize>,
 }
 
+impl PageQuery {
+    pub fn id_param(&self) -> String {
+        match &self.id {
+            Some(id) => format!("?id={id}"),
+            None => String::new(),
+        }
+    }
+
+    pub fn head_param(&self) -> String {
+        match (&self.id, &self.head) {
+            (None, Some(head)) => format!("?h={head}"),
+            _ => String::new(),
+        }
+    }
+
+    pub fn id_or_head_param(&self) -> String {
+        if let Some(id) = &self.id {
+            format!("?id={id}")
+        } else if let Some(head) = &self.head {
+            format!("?h={head}")
+        } else {
+            String::new()
+        }
+    }
+}
+
 #[derive(Template)]
 #[template(path = "repositorys.html")]
 struct ReposPage {

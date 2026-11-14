@@ -26,40 +26,18 @@ pub async fn page(
     path: web::Path<String>,
     query: web::Query<PageQuery>,
     data: web::Data<App>,
-) -> ActixResult<HttpResponse> {
-    let name = path.into_inner();
-    let repo = match data.find_repo(name) {
-        Some(r) => r,
-        None => return Ok(HttpResponse::NotFound().body("Repo not found")),
-    };
+) -> Result<HttpResponse, Error> {
+    let repo = data.get_repo(&path)?;
     let gix_repo = repo.gix();
 
-    let current_ref = match Ref::resolve(&repo, &query) {
-        Ok(r) => r,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-    let branch_names = match repo.branch_names() {
-        Ok(b) => b,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-
-    let (branches, branches_has_more) = match repo.branches(&gix_repo, 0, SUMMARY_LIMIT) {
-        Ok(c) => c,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-
-    let (tags, tags_has_more) = match repo.tags(0, SUMMARY_LIMIT) {
-        Ok(t) => t,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-
+    let current_ref = Ref::resolve(&repo, &query)?;
+    let branch_names = repo.branch_names()?;
+    let (branches, branches_has_more) = repo.branches(&gix_repo, 0, SUMMARY_LIMIT)?;
+    let (tags, tags_has_more) = repo.tags(0, SUMMARY_LIMIT)?;
     let (commits, commits_has_more) =
-        match repo.commits(&gix_repo, &current_ref, 0, SUMMARY_LIMIT, None) {
-            Ok(c) => c,
-            Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-        };
+        repo.commits(&gix_repo, &current_ref, 0, SUMMARY_LIMIT, None)?;
 
-    let rendered = SummaryPage {
+    render_html(&SummaryPage {
         repo: &repo,
         current_ref,
         offset: 0,
@@ -71,11 +49,5 @@ pub async fn page(
         commits,
         commits_has_more,
         query,
-    }
-    .render();
-
-    match rendered {
-        Ok(html) => Ok(HttpResponse::Ok().content_type("text/html").body(html)),
-        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    }
+    })
 }

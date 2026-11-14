@@ -12,7 +12,7 @@ use notify::{
 };
 use tokio::sync::mpsc;
 
-use crate::git::repository::Repository;
+use crate::{error::Error, git::repository::Repository};
 
 pub struct App {
     pub repos_dir: String,
@@ -28,15 +28,14 @@ impl App {
 
         let (tx, mut rx) = mpsc::unbounded_channel::<Event>();
 
-        let mut watcher = notify::recommended_watcher(move |res: notify::Result<Event>| {
-            match res {
+        let mut watcher =
+            notify::recommended_watcher(move |res: notify::Result<Event>| match res {
                 Ok(event) => {
                     let _ = tx.send(event);
                 }
                 Err(e) => eprintln!("repo watcher error: {e}"),
-            }
-        })
-        .expect("Failed to create repo directory watcher");
+            })
+            .expect("Failed to create repo directory watcher");
 
         watcher
             .watch(Path::new(&repos_dir), RecursiveMode::NonRecursive)
@@ -147,13 +146,18 @@ impl App {
         }
     }
 
-    pub fn find_repo(&self, name: String) -> Option<Repository> {
+    pub fn find_repo(&self, name: &str) -> Option<Repository> {
         self.repos
             .read()
             .ok()?
             .iter()
             .find(|r| r.name == name)
             .cloned()
+    }
+
+    pub fn get_repo(&self, name: &str) -> Result<Repository, Error> {
+        self.find_repo(name)
+            .ok_or_else(|| Error::NotFound("Repo not found".to_string()))
     }
 }
 

@@ -43,20 +43,7 @@ impl<'repo> Commit<'repo> {
     }
 
     pub fn branch_name(&self, repo: &Repository) -> Result<Option<String>, Error> {
-        let mut branch_name: Option<String> = None;
-
-        let gix_repo = repo.gix();
-        let references = gix_repo.references()?;
-        let local_branches = references.local_branches()?;
-
-        for branch in local_branches {
-            let mut branch = branch?;
-            let commit_id = branch.peel_to_commit()?.id().to_string();
-            if commit_id == self.id {
-                branch_name = Some(branch.name().shorten().to_string())
-            }
-        }
-        Ok(branch_name)
+        Ok(self.branch_tips(repo)?.into_iter().next())
     }
 
     pub fn branch_tips(&self, repo: &Repository) -> Result<Vec<String>, Error> {
@@ -72,31 +59,49 @@ impl<'repo> Commit<'repo> {
 }
 
 impl Repository {
+    /// Looks up a Commit by its 40-character hex SHA-1 hash.
     pub fn find_commit<'repo>(
         &self,
         gix_repo: &'repo gix::Repository,
         id: &str,
     ) -> Result<Commit<'repo>, Error> {
-        Commit::from_gix(
-            gix_repo
-                .find_commit(gix::ObjectId::from_str(id)?)?
-                .to_owned(),
-        )
+        let oid = gix::ObjectId::from_str(id)?;
+        Commit::from_gix(gix_repo.find_commit(oid)?)
     }
 
+    /// Resolves a Commit either from an explicit `?id=<sha>` query parameter,
+    /// or by peeling the active branch/tag reference (`current_ref`) to its latest commit.
+    pub fn resolve_commit<'repo>(
+        &self,
+        gix_repo: &'repo gix::Repository,
+        id: Option<&str>,
+        current_ref: &Ref,
+    ) -> Result<Commit<'repo>, Error> {
+        if let Some(id) = id {
+            self.find_commit(gix_repo, id)
+        } else {
+            let mut reference = gix_repo.find_reference(&current_ref.name)?;
+            Commit::from_gix(reference.peel_to_commit()?)
+        }
+    }
+
+    /// Returns the latest commit on `HEAD` (or falls back to the first valid reference in the repo).
     pub fn last_commit<'repo>(
         &self,
         gix_repo: &'repo gix::Repository,
     ) -> Result<Option<Commit<'repo>>, Error> {
-        for reference in gix_repo.references()?.all()? {
-            let Ok(commit) = reference?.peel_to_commit() else {
-                continue;
-            };
+        if let Ok(commit) = gix_repo.head_commit() {
             return Ok(Some(Commit::from_gix(commit)?));
+        }
+        for reference in gix_repo.references()?.all()? {
+            if let Ok(commit) = reference?.peel_to_commit() {
+                return Ok(Some(Commit::from_gix(commit)?));
+            }
         }
         Ok(None)
     }
 
+    /// Builds a map of `commit_sha -> [branch_names]` for every local branch (`refs/heads/*`).
     pub fn branch_tips_by_commit(&self) -> Result<HashMap<String, Vec<String>>, Error> {
         let gix_repo = self.gix();
         let references = gix_repo.references()?;
@@ -113,6 +118,8 @@ impl Repository {
         Ok(map)
     }
 
+    /// Walks the commit graph backwards starting from `current_ref` (like `git log`),
+    /// sorted newest-first by commit timestamp, with optional filtering and pagination.
     pub fn commits<'repo>(
         &self,
         gix_repo: &'repo gix::Repository,
@@ -121,8 +128,15 @@ impl Repository {
         limit: usize,
         filter: Option<&dyn Fn(&Commit) -> bool>,
     ) -> Result<(Vec<Commit<'repo>>, bool), Error> {
+        // 1. Parse the branch/tag name (e.g. "main") into its starting commit ObjectId
         let start = gix_repo.rev_parse_single(current_ref.name.as_bstr())?;
-        let revwalk = gix_repo.rev_walk([start]).all()?;
+        // 2. Walk parent links backwards from `start`, ordered by commit time
+        let revwalk = gix_repo
+            .rev_walk([start])
+            .sorting(gix::revision::walk::Sorting::ByCommitTime(
+                Default::default(),
+            ))
+            .all()?;
 
         let mut commits: Vec<Commit> = Vec::new();
         let mut has_next = false;

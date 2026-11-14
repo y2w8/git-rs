@@ -12,12 +12,15 @@ pub struct Branch<'repo> {
 impl<'repo> Branch<'repo> {
     pub fn from_gix(mut reference: Reference<'repo>) -> Result<Branch<'repo>, Error> {
         let commit = reference.peel_to_commit()?;
+        let author = GitSignature::from_gix(commit.author()?);
+        let time = Time::new(commit.time()?);
+        let last_commit = Commit::from_gix(commit)?;
 
         Ok(Branch {
             name: reference.name().shorten().to_string(),
-            last_commit: Commit::from_gix(commit.clone())?,
-            author: GitSignature::from_gix(commit.author()?),
-            time: Time::new(commit.time()?),
+            last_commit,
+            author,
+            time,
             gix: reference,
         })
     }

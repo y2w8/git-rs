@@ -61,35 +61,5 @@
     <h4>{{ commit.body()? }}</h4>
   </div>
   <h3><a href="/{{ repo.name }}/diff/?id={{ commit.id }}">Diffstat</a></h3>
-  <table class="diffstat">
-  <tbody>
-  {% for file_diff in diff.file_diffs %}
-    <tr>
-      <td class="mode">{{ file_diff.mode }}</td>
-      <td class="upd">
-        <a href="/{{ repo.name }}/diff/{{ file_diff.path }}{% if let Some(id) = query.id %}?id={{ id }}{% endif %}" class="{{ file_diff.state }}">{{ file_diff.path }}</a>
-      </td>
-      <td class="right">{{ file_diff.total }}</td>
-      <td class="graph">
-        <table summary="file diffstat" style="width: {{ file_diff.total_percentage }}%">
-          <tbody>
-            <tr>
-              {% if file_diff.total != 0 %}
-                {% if file_diff.insertions_percentage > 0.0 %}
-                  <td class="diffstat-addition" style="width: {{ file_diff.insertions_percentage }}%;"></td>
-                {% endif %}
-                {% if file_diff.deletions_percentage > 0.0 %}
-                  <td class="diffstat-deletion" style="width: {{ file_diff.deletions_percentage }}%;"></td>
-                {% endif %}
-              {% endif %}
-            </tr>
-          </tbody>
-        </table>
-      </td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
-<pre class="diff">{{ diff.stats }}
-{{ diff.output|safe }}</pre>
+  {{ macros::diff_view(repo, diff, query) }}
 {% endblock %}

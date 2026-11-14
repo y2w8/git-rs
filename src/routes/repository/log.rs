@@ -21,105 +21,37 @@ pub async fn page(
     path: web::Path<String>,
     query: web::Query<PageQuery>,
     data: web::Data<App>,
-) -> ActixResult<HttpResponse> {
-    let name = path.into_inner();
+) -> Result<HttpResponse, Error> {
     let query = query.into_inner();
-    let repo = match data.find_repo(name) {
-        Some(r) => r,
-        None => return Ok(HttpResponse::NotFound().body("Repo not found")),
-    };
+    let repo = data.get_repo(&path)?;
     let gix_repo = repo.gix();
 
-    let current_ref = match Ref::resolve(&repo, &query) {
-        Ok(r) => r,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-    let branch_names = match repo.branch_names() {
-        Ok(b) => b,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
+    let current_ref = Ref::resolve(&repo, &query)?;
+    let branch_names = repo.branch_names()?;
 
     let offset = query.offset.unwrap_or(0);
     let has_prev = offset >= 1;
 
-    let (mut commits, mut has_next): (Vec<Commit<'_>>, bool) = (Vec::new(), false);
-
-    if let Some(ref qt) = query.query_type {
-        match qt.as_str() {
-            "msg" => {
-                if let Some(ref v) = query.value {
-                    (commits, has_next) = match repo.commits(
-                        &gix_repo,
-                        &current_ref,
-                        offset,
-                        PAGE_SIZE,
-                        Some(&|c| {
-                            c.summary()
-                                .unwrap()
-                                .to_string()
-                                .to_lowercase()
-                                .contains(&v.to_lowercase())
-                        }),
-                    ) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                        }
-                    };
-                }
+    let value_lower = query.value.as_deref().unwrap_or_default().to_lowercase();
+    let filter: Option<&dyn Fn(&Commit) -> bool> =
+        match (query.query_type.as_deref(), query.value.is_some()) {
+            (Some("msg"), true) => Some(&|c| {
+                c.summary()
+                    .map(|s| s.to_string().to_lowercase().contains(&value_lower))
+                    .unwrap_or(false)
+            }),
+            (Some("author"), true) => {
+                Some(&|c| c.author.name.to_lowercase().contains(&value_lower))
             }
-
-            "author" => {
-                if let Some(ref v) = query.value {
-                    (commits, has_next) = match repo.commits(
-                        &gix_repo,
-                        &current_ref,
-                        offset,
-                        PAGE_SIZE,
-                        Some(&|c| c.author.name.to_lowercase().contains(&v.to_lowercase())),
-                    ) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                        }
-                    };
-                }
+            (Some("committer"), true) => {
+                Some(&|c| c.committer.name.to_lowercase().contains(&value_lower))
             }
-
-            "committer" => {
-                if let Some(ref v) = query.value {
-                    (commits, has_next) = match repo.commits(
-                        &gix_repo,
-                        &current_ref,
-                        offset,
-                        PAGE_SIZE,
-                        Some(&|c| c.committer.name.to_lowercase().contains(&v.to_lowercase())),
-                    ) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                        }
-                    };
-                }
-            }
-            _ => {
-                (commits, has_next) =
-                    match repo.commits(&gix_repo, &current_ref, offset, PAGE_SIZE, None) {
-                        Ok(c) => c,
-                        Err(e) => {
-                            return Ok(HttpResponse::InternalServerError().body(e.to_string()));
-                        }
-                    }
-            }
+            _ => None,
         };
-    } else {
-        (commits, has_next) = match repo.commits(&gix_repo, &current_ref, offset, PAGE_SIZE, None) {
-            Ok(c) => c,
-            Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-        };
-    }
 
-    let rendered = LogPage {
+    let (commits, has_next) = repo.commits(&gix_repo, &current_ref, offset, PAGE_SIZE, filter)?;
+
+    render_html(&LogPage {
         repo: &repo,
         branch_names,
         current_ref,
@@ -128,10 +60,5 @@ pub async fn page(
         has_prev,
         has_next,
         query,
-    }
-    .render();
-    match rendered {
-        Ok(html) => Ok(HttpResponse::Ok().content_type("text/html").body(html)),
-        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    }
+    })
 }

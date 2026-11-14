@@ -24,7 +24,7 @@ pub async fn git_info_refs(
     }
 
     let name = path.into_inner();
-    let repo = match data.find_repo(name) {
+    let repo = match data.find_repo(&name) {
         Some(r) => r,
         None => return Ok(HttpResponse::NotFound().body("Repo not found")),
     };
@@ -62,7 +62,7 @@ pub async fn git_upload_pack(
     body: Bytes,
 ) -> ActixResult<HttpResponse> {
     let name = path.into_inner();
-    let repo = match data.find_repo(name) {
+    let repo = match data.find_repo(&name) {
         Some(r) => r,
         None => return Ok(HttpResponse::NotFound().body("Repo not found")),
     };
@@ -77,7 +77,7 @@ pub async fn git_receive_pack(
     body: Bytes,
 ) -> ActixResult<HttpResponse> {
     let name = path.into_inner();
-    let repo = match data.find_repo(name) {
+    let repo = match data.find_repo(&name) {
         Some(r) => r,
         None => return Ok(HttpResponse::NotFound().body("Repo not found")),
     };

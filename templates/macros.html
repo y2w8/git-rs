@@ -28,43 +28,22 @@
   {% endif %}
 {% endmacro %}
 
-{% macro repo_tabs(repo: Repository, current_ref: Ref, query: PageQuery,  active: str) %}
+{% macro repo_tabs(repo: Repository, current_ref: Ref, query: PageQuery, active: str) %}
   <tr>
     <td>
-      {% decl parameters %}
-      {% if let Some(id) = query.id %}
-        {% let parameters %}?id={{ id }}{% endlet %}
-        <a href="/{{ repo.name }}/about/" class="{% if active == "about" %}active{% endif %}">about</a>
-        <a href="/{{ repo.name }}/" class="{% if active == "summary" %}active{% endif %}">summary</a>
-        <a href="/{{ repo.name }}/refs/{{ parameters }}" class="{% if active == "refs" %}active{% endif %}">refs</a>
-        <a href="/{{ repo.name }}/log/" class="{% if active == "log" %}active{% endif %}">log</a>
-        <a href="/{{ repo.name }}/tree/{{ parameters }}" class="{% if active == "tree" %}active{% endif %}">tree</a>
-        <a href="/{{ repo.name }}/commit/{{ parameters }}" class="{% if active == "commit" %}active{% endif %}">commit</a>
-        <a href="/{{ repo.name }}/diff/{{ parameters }}" class="{% if active == "diff" %}active{% endif %}">diff</a>
-      {% else if let Some(head) = query.head %}
-        {% let parameters %}?h={{ head }}{% endlet %}
-        <a href="/{{ repo.name }}/about/{{ parameters }}" class="{% if active == "about" %}active{% endif %}">about</a>
-        <a href="/{{ repo.name }}/" class="{% if active == "summary" %}active{% endif %}">summary</a>
-        <a href="/{{ repo.name }}/refs/" class="{% if active == "refs" %}active{% endif %}">refs</a>
-        <a href="/{{ repo.name }}/log/{{ parameters }}" class="{% if active == "log" %}active{% endif %}">log</a>
-        <a href="/{{ repo.name }}/tree/{{ parameters }}" class="{% if active == "tree" %}active{% endif %}">tree</a>
-        <a href="/{{ repo.name }}/commit/{{ parameters }}" class="{% if active == "commit" %}active{% endif %}">commit</a>
-        <a href="/{{ repo.name }}/diff/{{ parameters }}" class="{% if active == "diff" %}active{% endif %}">diff</a>
-      {% else  %}
-        <a href="/{{ repo.name }}/about/" class="{% if active == "about" %}active{% endif %}">about</a>
-        <a href="/{{ repo.name }}/" class="{% if active == "summary" %}active{% endif %}">summary</a>
-        <a href="/{{ repo.name }}/refs/" class="{% if active == "refs" %}active{% endif %}">refs</a>
-        <a href="/{{ repo.name }}/log/" class="{% if active == "log" %}active{% endif %}">log</a>
-        <a href="/{{ repo.name }}/tree/" class="{% if active == "tree" %}active{% endif %}">tree</a>
-        <a href="/{{ repo.name }}/commit/" class="{% if active == "commit" %}active{% endif %}">commit</a>
-        <a href="/{{ repo.name }}/diff/" class="{% if active == "diff" %}active{% endif %}">diff</a>
-      {% endif %}
+      <a href="/{{ repo.name }}/about/{{ query.head_param() }}" class="{% if active == "about" %}active{% endif %}">about</a>
+      <a href="/{{ repo.name }}/" class="{% if active == "summary" %}active{% endif %}">summary</a>
+      <a href="/{{ repo.name }}/refs/{{ query.id_param() }}" class="{% if active == "refs" %}active{% endif %}">refs</a>
+      <a href="/{{ repo.name }}/log/{{ query.head_param() }}" class="{% if active == "log" %}active{% endif %}">log</a>
+      <a href="/{{ repo.name }}/tree/{{ query.id_or_head_param() }}" class="{% if active == "tree" %}active{% endif %}">tree</a>
+      <a href="/{{ repo.name }}/commit/{{ query.id_or_head_param() }}" class="{% if active == "commit" %}active{% endif %}">commit</a>
+      <a href="/{{ repo.name }}/diff/{{ query.id_or_head_param() }}" class="{% if active == "diff" %}active{% endif %}">diff</a>
     </td>
     <td class="form">
       <form method="get" action="/{{ repo.name }}/log/">
         <select name="qt">
           <option value="msg" selected>msg</option>
-          <option value="author" >author</option>
+          <option value="author">author</option>
           <option value="committer">committer</option>
         </select>
         <input type="search" name="v" size="10" value="">
@@ -72,6 +51,40 @@
       </form>
     </td>
   </tr>
+{% endmacro %}
+
+{% macro diff_view(repo, diff, query) %}
+  <table class="diffstat">
+    <tbody>
+      {% for file_diff in diff.file_diffs %}
+        <tr>
+          <td class="mode">{{ file_diff.mode }}</td>
+          <td class="upd">
+            <a href="/{{ repo.name }}/diff/{{ file_diff.path }}{% if let Some(id) = query.id %}?id={{ id }}{% endif %}" class="{{ file_diff.state }}">{{ file_diff.path }}</a>
+          </td>
+          <td class="right">{{ file_diff.total }}</td>
+          <td class="graph">
+            <table summary="file diffstat" style="width: {{ file_diff.total_percentage }}%">
+              <tbody>
+                <tr>
+                  {% if file_diff.total != 0 %}
+                    {% if file_diff.insertions_percentage > 0.0 %}
+                      <td class="diffstat-addition" style="width: {{ file_diff.insertions_percentage }}%;"></td>
+                    {% endif %}
+                    {% if file_diff.deletions_percentage > 0.0 %}
+                      <td class="diffstat-deletion" style="width: {{ file_diff.deletions_percentage }}%;"></td>
+                    {% endif %}
+                  {% endif %}
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <pre class="diff">{{ diff.stats }}
+{{ diff.output|safe }}</pre>
 {% endmacro %}
 
 {% macro branches(branches, branches_has_more, has_prev, page, mode) %}
@@ -107,9 +120,9 @@
           {% if has_prev %}
             {% let offset = offset.saturating_sub(PAGE_SIZE) %}
             {% if offset > 0 %}
-              <a href="/{{ repo.name }}/refs/heada/?ofs={{ offset }}">[prev]</a>
+              <a href="/{{ repo.name }}/refs/heads/?ofs={{ offset }}">[prev]</a>
             {% else %}
-              <a href="/{{ repo.name }}/refs/heada/">[prev]</a>
+              <a href="/{{ repo.name }}/refs/heads/">[prev]</a>
             {% endif %}
           {% endif %}
 

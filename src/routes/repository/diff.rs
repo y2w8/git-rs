@@ -24,55 +24,24 @@ pub async fn page(
     path: web::Path<(String, Option<String>)>,
     query: web::Query<PageQuery>,
     data: web::Data<App>,
-) -> ActixResult<HttpResponse> {
+) -> Result<HttpResponse, Error> {
     let (name, file_path) = path.into_inner();
-    let repo = match data.find_repo(name) {
-        Some(r) => r,
-        None => return Ok(HttpResponse::NotFound().body("Repo not found")),
-    };
+    let repo = data.get_repo(&name)?;
     let gix_repo = repo.gix();
 
-    let current_ref = match Ref::resolve(&repo, &query) {
-        Ok(r) => r,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-    let branch_names = match repo.branch_names() {
-        Ok(b) => b,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-    let commit: Commit = if let Some(id) = query.clone().into_inner().id {
-        match repo.find_commit(&gix_repo, &id) {
-            Ok(c) => c,
-            Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-        }
-    } else {
-        match gix_repo.find_reference(&format!("heads/{}", current_ref.name)) {
-            Ok(mut r) => match r.peel_to_commit() {
-                Ok(c) => Commit::from_gix(c).unwrap(),
-                Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-            },
-            Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-        }
-    };
+    let current_ref = Ref::resolve(&repo, &query)?;
+    let branch_names = repo.branch_names()?;
+    let commit = repo.resolve_commit(&gix_repo, query.id.as_deref(), &current_ref)?;
+    let diff = commit.diff(&repo, file_path.as_deref(), DiffFormat::Plain)?;
 
-    let diff: Diff = match commit.diff(&repo, file_path.clone(), DiffFormat::Plain) {
-        Ok(d) => d,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-
-    let rendered = DiffPage {
+    render_html(&DiffPage {
         repo: &repo,
         branch_names,
         current_ref,
         file_path,
         diff,
         query,
-    }
-    .render();
-    match rendered {
-        Ok(html) => Ok(HttpResponse::Ok().content_type("text/html").body(html)),
-        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    }
+    })
 }
 
 #[get("/{repo}/patch/")]
@@ -80,64 +49,37 @@ pub async fn patch(
     path: web::Path<String>,
     query: web::Query<PageQuery>,
     data: web::Data<App>,
-) -> ActixResult<HttpResponse> {
-    let name = path.into_inner();
-    let repo = match data.find_repo(name) {
-        Some(r) => r,
-        None => return Ok(HttpResponse::NotFound().body("Repo not found")),
-    };
+) -> Result<HttpResponse, Error> {
+    let repo = data.get_repo(&path)?;
     let gix_repo = repo.gix();
 
-    let current_ref = match Ref::resolve(&repo, &query) {
-        Ok(r) => r,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-    let commit: Commit = if let Some(id) = query.clone().into_inner().id {
-        match repo.find_commit(&gix_repo, &id) {
-            Ok(c) => c,
-            Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-        }
-    } else {
-        match gix_repo.find_reference(&format!("heads/{}", current_ref.name)) {
-            Ok(mut r) => match r.peel_to_commit() {
-                Ok(c) => Commit::from_gix(c).unwrap(),
-                Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-            },
-            Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-        }
-    };
-
-    let diff: Diff = match commit.diff(&repo, None, DiffFormat::Patch) {
-        Ok(d) => d,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
+    let current_ref = Ref::resolve(&repo, &query)?;
+    let commit = repo.resolve_commit(&gix_repo, query.id.as_deref(), &current_ref)?;
+    let diff = commit.diff(&repo, None, DiffFormat::Patch)?;
 
     let mut data = BytesMut::new();
-    writeln!(data, "From {} Mon Sep 17 00:00:00 2001", commit.id).unwrap();
+    writeln!(data, "From {} Mon Sep 17 00:00:00 2001", commit.id)?;
     writeln!(
         data,
         "From: {} <{}>",
         commit.author.name, commit.author.email
-    )
-    .unwrap();
+    )?;
 
-    write!(data, "Date: ").unwrap();
+    write!(data, "Date: ")?;
     let mut writer = data.writer();
     commit.author.time.format_rfc(&mut writer);
     let mut data = writer.into_inner();
-    writeln!(data).unwrap();
+    writeln!(data)?;
 
-    writeln!(data, "Subject: [PATCH] {}\n", commit.summary().unwrap()).unwrap();
-
-    write!(data, "{}", commit.body().unwrap()).unwrap();
-
-    writeln!(data, "---").unwrap();
+    writeln!(data, "Subject: [PATCH] {}\n", commit.summary()?)?;
+    write!(data, "{}", commit.body()?)?;
+    writeln!(data, "---")?;
 
     data.extend_from_slice(diff.stats.as_bytes());
     data.extend_from_slice(b"\n");
     data.extend_from_slice(diff.output.as_bytes());
 
-    writeln!(data, "--\ngit-rs {}", crate_version!()).unwrap();
+    writeln!(data, "--\ngit-rs {}", crate_version!())?;
 
     Ok(HttpResponse::Ok().content_type("text").body(data))
 }

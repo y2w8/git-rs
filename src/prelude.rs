@@ -3,7 +3,7 @@ pub use actix_web::{
 };
 
 pub use crate::app::App;
-pub use crate::error::Error;
+pub use crate::error::{Error, render_html};
 pub use crate::git::{
     self, GitSignature, branch::Branch, commit::Commit, refs::Ref, repository::Repository, tag::Tag,
 };

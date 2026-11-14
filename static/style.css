@@ -1,5 +1,7 @@
+/* ==========================================================================
+   1. Design Tokens (Catppuccin Mocha Palette)
+   ========================================================================== */
 :root {
-  /* Catppuccin Mocha palette */
   --base: #1e1d2d;
   --mantle: #181825;
   --crust: #11111b;
@@ -27,7 +29,7 @@
   --green: #a6e3a1;
   --teal: #94e2d5;
   --sky: #89dceb;
-  --saphhire: #74c7ec;
+  --sapphire: #74c7ec;
   --blue: #89b4fa;
   --lavender: #b4befe;
 
@@ -42,13 +44,15 @@
   --light_grey: #605f6f;
 }
 
+/* ==========================================================================
+   2. Base & Typography
+   ========================================================================== */
 * {
   box-sizing: border-box;
 }
 
 body {
   font-family: 'Maple Mono NF', monospace;
-  /* font-family: 'BigBlueTerm437 Nerd Font', monospace; */
   font-size: 1rem;
   margin: 0;
   background: var(--base);
@@ -70,134 +74,17 @@ h3 {
   color: var(--text);
 }
 
-table {
-  border-collapse: collapse;
-  width: 100%;
-  overflow: hidden;
-}
-
-td.msg {
-  display: flex;
-  align-items: center;
-  gap: 0.4em;
-  overflow: hidden; /* needed for ellipsis to take effect */
-}
-
-td.msg .msg-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0; /* flex children don't shrink below content size by default — this overrides that */
-}
-
-td.author {
-  white-space: nowrap;
-}
-
-
-th {
-  text-align: left;
-  white-space: nowrap;
-}
-
-tbody tr.no-background:nth-child(even),
-tbody tr.no-background:nth-child(odd),
-tbody tr.no-background:hover {
-  background: transparent;
-}
-
-td {
-  text-align: left;
-  white-space: nowrap;
-  padding: 0.75rem 1rem;
-}
-
-tbody tr:nth-child(even) {
-  background: var(--one_bg);
-}
-
-tbody tr:nth-child(odd) {
-  background: var(--black2);
-}
-
-tbody tr:hover {
-  background: var(--surface0);
-}
-
-th {
+a {
   color: var(--peach);
-  font-weight: 600;
-  font-style: bold;
-  letter-spacing: 0.05em;
-}
-
-td.form {
-  text-align: right;
-}
-
-td.form input {
-  color: var(--text);
-  background: var(--surface0);
-  border: 1px solid var(--surface1);
-  border-radius: 0;
   padding: 5px;
+  text-decoration: none;
 }
 
-td.form select {
-  color: var(--text);
-  background: var(--surface0);
-  border: 1px solid var(--surface1);
-  border-radius: 0;
-  padding: 5px;
-}
-
-.tabs {
-  margin-top: 2rem;
-  background: var(--black2);
-}
-
-.tabs a,
-td a {
-  color: var(--text);
-}
-
-.commit-info {
-  margin-top: 2rem;
-  max-width: fit-content;
-  background: transparent;
-}
-
-.commit-info tr:nth-child(odd),
-.commit-info tr:nth-child(even),
-.commit-info tr:hover{
-  background-color: transparent;
-}
-
-.commit-info td {
-  padding: 0.20rem 1rem 0.20rem 0rem;
-}
-
-.commit-info a {
-  color: var(--peach);
-}
-
-.commit-subject {
-  padding: 1rem 0;
-}
-
-.commit-subject h1 {
-  font-weight: bold;
-  font-size: 120%;
-}
-
-.commit-subject h4 {
-  font-weight: bold;
-  color: var(--overlay1);
-}
-
-.tree-breadcrumb {
-  background: var(--black2);
-  padding: 5px;
+a:hover,
+a:active,
+a.active {
+  color: var(--crust);
+  background: var(--peach);
 }
 
 code {
@@ -220,62 +107,74 @@ pre code {
   padding: 0;
 }
 
-a {
+/* ==========================================================================
+   3. Global Tables & Forms
+   ========================================================================== */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  overflow: hidden;
+}
+
+th {
+  text-align: left;
+  white-space: nowrap;
   color: var(--peach);
-  padding: 5px;
-  text-decoration: none;
-}
-
-a:hover,
-a:active,
-a.active {
-  color: var(--crust);
-  background: var(--peach);
-}
-
-.fresh {
-  color: var(--green);
   font-weight: 600;
+  letter-spacing: 0.05em;
 }
 
-.recent {
-  color: var(--overlay1);
+td {
+  text-align: left;
+  white-space: nowrap;
+  padding: 0.75rem 1rem;
 }
 
-.stale {
-  color: var(--surface2);
+td a {
+  color: var(--text);
 }
 
-.description {
-  color: var(--subtext1);
-  font-style: italic;
+td.mode,
+th.mode {
+  width: 10ch;
+  font-family: monospace;
+  white-space: nowrap;
 }
 
-span.avatar img.onhover {
-  display: none;
+tbody tr:nth-child(even) {
+  background: var(--one_bg);
+}
+
+tbody tr:nth-child(odd) {
+  background: var(--black2);
+}
+
+tbody tr:hover {
+  background: var(--surface0);
+}
+
+tbody tr.no-background:nth-child(even),
+tbody tr.no-background:nth-child(odd),
+tbody tr.no-background:hover {
+  background: transparent;
+}
+
+td.form {
+  text-align: right;
+}
+
+td.form input,
+td.form select {
+  color: var(--text);
+  background: var(--surface0);
   border: 1px solid var(--surface1);
-  padding: 0px;
-  width: 128px;
-  height: 128px;
+  border-radius: 0;
+  padding: 5px;
 }
 
-span.avatar img.inline {
-  width: 20px;
-  height: 20px;
-  vertical-align: top;
-}
-
-span.avatar:hover>img.onhover {
-  display: block;
-  position: absolute;
-  margin-left: 1.5em;
-  background-color: var(--crust);
-}
-
-.folder {
-  color: var(--peach);
-}
-
+/* ==========================================================================
+   4. Header & Navigation Tabs
+   ========================================================================== */
 td.logo {
   width: 96px;
   vertical-align: top;
@@ -298,95 +197,28 @@ td.sub {
   padding-left: 10px;
 }
 
-td.mode, th.mode {
-  width: 10ch;
-  font-family: monospace;
-  white-space: nowrap;
+.tabs {
+  margin-top: 2rem;
+  background: var(--black2);
 }
 
-/* === Blob metadata bar === */
-.blob-meta {
-  display: flex;
-  align-items: center;
-  gap: 1em;
-  padding: 0.5em 0.8em;
-  margin-bottom: 0.5em;
-  background-color: var(--black2);
-  border: 1px solid var(--surface1);
-  font-family: monospace;
-  font-size: 0.9em;
-}
-
-.blob-meta .mode {
-  white-space: nowrap;
-  color: var(--green);
-}
-
-.blob-meta .blob-id {
-  color: var(--subtext0);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.blob-meta .size {
-  white-space: nowrap;
-  color: var(--subtext1);
-  margin-left: auto; /* pushes size + raw-link to the right edge */
-}
-
-.blob-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: monospace;
-}
-
-.blob-table tr:nth-child(odd),
-.blob-table tr:nth-child(even),
-.blob-table tr:hover{
-  background-color: transparent;
-}
-
-.blob-table .line-no {
-  width: 4em;
-  text-align: right;
-  padding: 0 0.8em;
-  color: var(--overlay0);
-  user-select: none; /* selecting code shouldn't drag line numbers along with it */
-  border-right: 1px solid var(--surface1);
-  vertical-align: top;
-  white-space: nowrap;
-}
-
-.blob-table .line-content {
-  width: 100%;
-  padding: 0 0.8em;
+.tabs a {
   color: var(--text);
 }
 
-.blob-table .line-content pre {
-  margin: 0;
-  background: none;
-  border: none;
-  padding: 0;
-  white-space: pre-wrap; /* wraps long lines instead of forcing horizontal scroll */
-  word-break: break-all;
-}
-
-.clone-url {
-  background: var(--surface0);
-  color: var(--peach);
-  padding: 4px 10px;
-  font-size: 0.85em;
+.tree-breadcrumb {
+  background: var(--black2);
+  padding: 5px;
 }
 
 .show_more a,
-.pagination a{
+.pagination a {
   color: var(--peach);
   font-size: 18px;
 }
 
 .show_more a:hover,
-.pagination a:hover{
+.pagination a:hover {
   color: var(--crust);
 }
 
@@ -394,6 +226,38 @@ td.mode, th.mode {
   margin-top: 1rem;
   text-align: center;
   font-size: 20px;
+}
+
+/* ==========================================================================
+   5. Metadata Badges, Avatars & Status Indicators
+   ========================================================================== */
+.fresh {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.recent {
+  color: var(--overlay1);
+}
+
+.stale {
+  color: var(--surface2);
+}
+
+.description {
+  color: var(--subtext1);
+  font-style: italic;
+}
+
+.folder {
+  color: var(--peach);
+}
+
+.clone-url {
+  background: var(--surface0);
+  color: var(--peach);
+  padding: 4px 10px;
+  font-size: 0.85em;
 }
 
 .badge_head {
@@ -424,31 +288,162 @@ td.mode, th.mode {
   color: var(--red);
 }
 
-.mt-1 {
-  margin-top: 1rem;
+span.avatar img.inline {
+  width: 20px;
+  height: 20px;
+  vertical-align: top;
 }
 
-.mt-2 {
+span.avatar img.onhover {
+  display: none;
+  border: 1px solid var(--surface1);
+  padding: 0;
+  width: 128px;
+  height: 128px;
+}
+
+span.avatar:hover > img.onhover {
+  display: block;
+  position: absolute;
+  margin-left: 1.5em;
+  background-color: var(--crust);
+}
+
+/* ==========================================================================
+   6. Commit View & Message Cell
+   ========================================================================== */
+td.msg {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  overflow: hidden;
+}
+
+td.msg .msg-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+td.author {
+  white-space: nowrap;
+}
+
+.commit-info {
   margin-top: 2rem;
+  max-width: fit-content;
+  background: transparent;
 }
 
-.mt-3 {
-  margin-top: 3rem;
+.commit-info tr:nth-child(odd),
+.commit-info tr:nth-child(even),
+.commit-info tr:hover {
+  background-color: transparent;
 }
 
-.mt-4 {
-  margin-top: 4rem;
+.commit-info td {
+  padding: 0.20rem 1rem 0.20rem 0;
 }
 
-.mt-5 {
-  margin-top: 5rem;
+.commit-info a {
+  color: var(--peach);
 }
+
+.commit-subject {
+  padding: 1rem 0;
+}
+
+.commit-subject h1 {
+  font-weight: bold;
+  font-size: 120%;
+}
+
+.commit-subject h4 {
+  font-weight: bold;
+  color: var(--overlay1);
+}
+
+/* ==========================================================================
+   7. Tree & Blob View
+   ========================================================================== */
+.blob-meta {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  padding: 0.5em 0.8em;
+  margin-bottom: 0.5em;
+  background-color: var(--black2);
+  border: 1px solid var(--surface1);
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.blob-meta .mode {
+  white-space: nowrap;
+  color: var(--green);
+}
+
+.blob-meta .blob-id {
+  color: var(--subtext0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blob-meta .size {
+  white-space: nowrap;
+  color: var(--subtext1);
+  margin-left: auto;
+}
+
+.blob-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: monospace;
+}
+
+.blob-table tr:nth-child(odd),
+.blob-table tr:nth-child(even),
+.blob-table tr:hover {
+  background-color: transparent;
+}
+
+.blob-table .line-no {
+  width: 4em;
+  text-align: right;
+  padding: 0 0.8em;
+  color: var(--overlay0);
+  user-select: none;
+  border-right: 1px solid var(--surface1);
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.blob-table .line-content {
+  width: 100%;
+  padding: 0 0.8em;
+  color: var(--text);
+}
+
+.blob-table .line-content pre {
+  margin: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ==========================================================================
+   8. Diff & Diffstat
+   ========================================================================== */
 table.diffstat {
   background: var(--surface0);
   border: 1px var(--surface1) solid;
   max-width: 50%;
   min-width: 50%;
 }
+
 table.diffstat td {
   padding: 0.2em 0.2em 0.1em 0.1em;
 }
@@ -456,7 +451,7 @@ table.diffstat td {
 .diffstat tr,
 .diffstat tr:nth-child(odd),
 .diffstat tr:nth-child(even),
-.diffstat tr:hover{
+.diffstat tr:hover {
   background-color: transparent;
 }
 
@@ -506,11 +501,6 @@ pre.diff {
   color: var(--blue);
 }
 
-.diff-addition::before, .diff-deletion::before, .diff-context::before {
-  display: inline-block;
-  color: #888;
-}
-
 .diff-file-header {
   font-weight: bold;
 }
@@ -523,31 +513,35 @@ pre.diff {
   background: #2b3038;
   color: var(--green);
   display: block;
+}
 
-  &::before {
-    content: '+ ';
-  }
+.diff-addition::before {
+  content: '+ ';
+  display: inline-block;
+  color: #888;
 }
 
 .diff-deletion {
   background: #332839;
   color: var(--red);
   display: block;
-
-  &::before {
-    content: '- ';
-  }
 }
 
-.diff-context {
-  &::before {
-    content: '  ';
-  }
+.diff-deletion::before {
+  content: '- ';
+  display: inline-block;
+  color: #888;
 }
 
+.diff-context::before {
+  content: '  ';
+  display: inline-block;
+  color: #888;
+}
 
-/* NOTE: Markdown */
-
+/* ==========================================================================
+   9. Markdown & Readme
+   ========================================================================== */
 .readme h1,
 .readme h2,
 .readme h3,
@@ -563,10 +557,9 @@ pre.diff {
   padding-bottom: 0.3rem;
 }
 
-/* Paragraph */
 .readme p {
   font-size: 14px;
-  color: var(--catppuccin-subtext1);
+  color: var(--subtext1);
 }
 
 .readme hr {

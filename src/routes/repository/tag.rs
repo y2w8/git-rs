@@ -15,44 +15,24 @@ pub async fn page(
     path: web::Path<String>,
     query: web::Query<PageQuery>,
     data: web::Data<App>,
-) -> ActixResult<HttpResponse> {
-    let name = path.into_inner();
-    let repo = match data.find_repo(name) {
-        Some(r) => r,
-        None => return Ok(HttpResponse::NotFound().body("Repo not found")),
-    };
+) -> Result<HttpResponse, Error> {
+    let repo = data.get_repo(&path)?;
     let gix_repo = repo.gix();
 
-    let current_ref = match Ref::resolve(&repo, &query) {
-        Ok(r) => r,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-    let branch_names = match repo.branch_names() {
-        Ok(b) => b,
-        Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    };
-    let tag: Tag = if let Some(head) = query.clone().into_inner().head {
-        match repo.find_tag(&head) {
-            Ok(c) => c,
-            Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-        }
+    let current_ref = Ref::resolve(&repo, &query)?;
+    let branch_names = repo.branch_names()?;
+    let tag = if let Some(ref head) = query.head {
+        repo.find_tag(head)?
     } else {
-        match gix_repo.find_reference(&format!("heads/{}", current_ref.name)) {
-            Ok(r) => Tag::from_gix(r).unwrap(),
-            Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
-        }
+        let reference = gix_repo.find_reference(&format!("heads/{}", current_ref.name))?;
+        Tag::from_gix(reference)?
     };
 
-    let rendered = TagPage {
+    render_html(&TagPage {
         repo: &repo,
         branch_names,
         current_ref,
         tag,
         query,
-    }
-    .render();
-    match rendered {
-        Ok(html) => Ok(HttpResponse::Ok().content_type("text/html").body(html)),
-        Err(e) => Ok(HttpResponse::InternalServerError().body(e.to_string())),
-    }
+    })
 }

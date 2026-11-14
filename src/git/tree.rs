@@ -58,12 +58,11 @@ impl<'repo> Commit<'repo> {
             let kind = mode.kind();
 
             let size = if matches!(kind, EntryKind::Blob | EntryKind::BlobExecutable) {
-                entry
-                    .object()
-                    .context("failed to load blob object")?
-                    .try_into_blob()
+                self.gix
+                    .repo
+                    .find_header(entry.oid())
                     .ok()
-                    .map(|blob| blob.data.len() as u64)
+                    .map(|h| h.size())
             } else {
                 None
             };

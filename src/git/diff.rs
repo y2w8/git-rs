@@ -59,7 +59,7 @@ impl<'repo> Commit<'repo> {
     pub fn diff(
         &self,
         repo: &Repository,
-        limit_file: Option<String>,
+        limit_file: Option<&str>,
         format: DiffFormat,
     ) -> Result<Diff, Error> {
         match format {
@@ -68,36 +68,32 @@ impl<'repo> Commit<'repo> {
         }
     }
 
+    /// Computes the diff between this commit and its first parent commit (or an empty tree if this is the initial commit).
     fn diff_with<F: DiffFormatter>(
         &self,
         repo: &Repository,
-        limit_file: Option<String>,
+        limit_file: Option<&str>,
         formatter: F,
     ) -> Result<Diff, Error> {
         const WIDTH: usize = 80;
         let mut diff = Diff::default();
         let gix_repo = repo.gix();
 
+        // Phase 1: Get this commit's root directory Tree and its first parent's root directory Tree.
+        // If the commit has no parents (the very first commit in the repo), compare against an empty Tree.
         let current_tree = self.gix.tree()?;
-        let parent_tree = self
-            .gix
-            .ancestors()
-            .first_parent_only()
-            .all()?
-            .nth(1)
-            .transpose()?
-            .map(|v| v.object())
-            .transpose()?
-            .map(|v| v.tree())
-            .transpose()?
-            .unwrap_or_else(|| gix_repo.empty_tree());
-
-        // hoisted out of the per-change closure — it's the same for every
-        // file in this commit, no need to recompute it each time.
-        let parent_id = self.gix.parent_ids().next().map(|id| id.to_string());
+        let first_parent = self.gix.parent_ids().next();
+        let parent_tree = match first_parent {
+            Some(id) => id.object()?.into_commit().tree()?,
+            None => gix_repo.empty_tree(),
+        };
+        let parent_id = first_parent.map(|id| id.to_string());
         let commit_id = self.gix.id.to_string();
 
-        let mut resource_cache = repo.gix().diff_resource_cache_for_tree_diff()?;
+        // `tree_diff_cache` is held by the tree-walker while iterating directory changes;
+        // `blob_diff_cache` is used inside the callback to diff individual file contents (Blobs).
+        let mut tree_diff_cache = gix_repo.diff_resource_cache_for_tree_diff()?;
+        let mut blob_diff_cache = gix_repo.diff_resource_cache_for_tree_diff()?;
 
         let mut changes = parent_tree.changes()?;
         changes.options(|opts| {
@@ -105,21 +101,15 @@ impl<'repo> Commit<'repo> {
         });
         changes.for_each_to_obtain_tree_with_cache(
             &current_tree,
-            &mut gix_repo.diff_resource_cache_for_tree_diff()?,
+            &mut tree_diff_cache,
             |change| {
                 DiffBuilder {
                     output: &mut diff.output,
-                    resource_cache: &mut resource_cache,
+                    resource_cache: &mut blob_diff_cache,
                     diffs: &mut diff.file_diffs,
                     formatter: &formatter,
                 }
-                .handle(
-                    change,
-                    repo,
-                    parent_id.as_deref(),
-                    &commit_id,
-                    limit_file.clone(),
-                )
+                .handle(change, repo, parent_id.as_deref(), &commit_id, limit_file)
             },
         )?;
 
@@ -187,34 +177,20 @@ impl<'repo> Commit<'repo> {
         }
         writeln!(diff.stats)?;
 
-        diff.file_diffs = diff
-            .file_diffs
-            .into_iter()
-            .map(|f| {
-                let total_percentage = if diff.total < 100 && diff.total > 0 {
-                    diff.total as f64
-                } else if diff.total > 0 {
-                    (f.total as f64) * 100.0 / (diff.total as f64)
-                } else {
-                    0.0
-                };
-                let (insertions_percentage, deletions_percentage) = if f.total > 0 {
-                    (
-                        (f.insertions as f64) * 100.0 / (f.total as f64),
-                        (f.deletions as f64) * 100.0 / (f.total as f64),
-                    )
-                } else {
-                    (0.0, 0.0)
-                };
+        for f in &mut diff.file_diffs {
+            f.total_percentage = if diff.total < 100 && diff.total > 0 {
+                diff.total as f64
+            } else if diff.total > 0 {
+                (f.total as f64) * 100.0 / (diff.total as f64)
+            } else {
+                0.0
+            };
 
-                FileDiff {
-                    total_percentage,
-                    insertions_percentage,
-                    deletions_percentage,
-                    ..f
-                }
-            })
-            .collect();
+            if f.total > 0 {
+                f.insertions_percentage = (f.insertions as f64) * 100.0 / (f.total as f64);
+                f.deletions_percentage = (f.deletions as f64) * 100.0 / (f.total as f64);
+            }
+        }
 
         Ok(diff)
     }
@@ -261,7 +237,7 @@ impl<F: DiffFormatter> DiffBuilder<'_, F> {
         repo: &Repository,
         parent_id: Option<&str>,
         commit_id: &str,
-        limit_file: Option<String>,
+        limit_file: Option<&str>,
     ) -> anyhow::Result<gix::object::tree::diff::Action> {
         if !change.entry_mode().is_blob_or_symlink() {
             return Ok(gix::object::tree::diff::Action::Continue(()));

@@ -1,10 +1,18 @@
+use actix_web::{HttpResponse, ResponseError, http::StatusCode};
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("operation failed")]
     Failed,
 
-    #[error("not found: {0}")]
+    #[error("{0}")]
     NotFound(String),
+
+    #[error(transparent)]
+    Render(#[from] askama::Error),
+
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
 
     #[error(transparent)]
     Utf8(#[from] std::str::Utf8Error),
@@ -71,4 +79,22 @@ pub enum Error {
 
     #[error(transparent)]
     Boxed(#[from] Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl ResponseError for Error {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            Self::NotFound(_) => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    fn error_response(&self) -> HttpResponse {
+        HttpResponse::build(self.status_code()).body(self.to_string())
+    }
+}
+
+pub fn render_html<T: askama::Template>(template: &T) -> Result<HttpResponse, Error> {
+    let html = template.render()?;
+    Ok(HttpResponse::Ok().content_type("text/html").body(html))
 }
