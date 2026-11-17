@@ -1,0 +1,16 @@
+[Unit]
+Description=git-rs — Lightweight Git web frontend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/srv/git
+ExecStart=/usr/bin/git-rs --url 0.0.0.0 --port 80 --repos-dir /srv/git
+Restart=on-failure
+RestartSec=5
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target
