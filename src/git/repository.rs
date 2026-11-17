@@ -11,9 +11,8 @@ use tar::Builder;
 use crate::{
     error::Error,
     git::{
-        commit::Commit,
         refs::Ref,
-        tree::{Blob, PathView},
+        tree::{self, Blob, PathView},
     },
 };
 
@@ -22,11 +21,7 @@ pub struct Repository {
     pub name: String,
     pub description: String,
     pub owner: Option<String>,
-
-    // Path on disk (not exposed to clients)
     pub path: PathBuf,
-    // ThreadSafeRepository holds shared repo state so it can live across web worker threads.
-    // Call `self.gix()` on a worker thread to get a thread-local `gix::Repository` with object caches.
     pub gix: gix::ThreadSafeRepository,
 }
 
@@ -45,7 +40,6 @@ impl Repository {
         };
 
         let gix = gix::ThreadSafeRepository::open(path).map_err(|_| Error::Failed)?;
-
         let owner = gix
             .to_thread_local()
             .config_snapshot()
@@ -61,29 +55,21 @@ impl Repository {
         })
     }
 
-    /// Converts the shared `ThreadSafeRepository` handle into a thread-local `gix::Repository`
-    /// that caches decoded Git objects in memory for the current request.
     pub fn gix(&self) -> gix::Repository {
         self.gix.to_thread_local()
     }
 
-    /// Looks for a `README*` file in the root folder (`Tree`) of the `HEAD` commit.
     pub fn readme(&self) -> Option<String> {
         let gix_repo = self.gix();
-        // 1. Follow HEAD -> branch -> latest Commit object
-        let commit = gix_repo.head().ok()?.peel_to_commit().ok()?;
-        // 2. Get the root directory snapshot (Tree) of that Commit
-        let tree = commit.tree().ok()?;
+        let tree = gix_repo.head().ok()?.peel_to_commit().ok()?.tree().ok()?;
 
-        // 3. Find the first entry whose filename starts with "readme" (case-insensitive)
         for entry in tree.iter().flatten() {
             if entry
                 .filename()
                 .to_string()
-                .to_lowercase()
+                .to_ascii_lowercase()
                 .starts_with("readme")
             {
-                // Load the file contents (Blob) from Git's object database
                 let blob = entry.object().ok()?.into_blob();
                 return Some(String::from_utf8_lossy(&blob.data).into_owned());
             }
@@ -91,14 +77,12 @@ impl Repository {
         None
     }
 
-    /// Streams a commit or branch's directory tree into an in-memory `.tar.gz` archive.
     pub fn archive(
         &self,
         current_ref: &Ref,
         commit: &Option<String>,
     ) -> Result<(Vec<u8>, String), anyhow::Error> {
         let gix_repo = self.gix();
-        // Resolve the root directory Tree either from a specific commit hash or from a branch/tag ref
         let (tree, filename) = if let Some(commit) = commit {
             (
                 self.find_commit(&gix_repo, commit)?.gix.tree()?,
@@ -106,7 +90,7 @@ impl Repository {
             )
         } else {
             (
-                gix_repo.find_reference(&current_ref.name)?.peel_to_tree()?,
+                Self::root_tree(&gix_repo, current_ref)?,
                 format!("{}.tar.gz", current_ref.name.replace('/', "-")),
             )
         };
@@ -116,9 +100,7 @@ impl Repository {
 
         Self::add_tree_to_archive(&tree, "", &mut builder)?;
 
-        // Flush the tar footer, then finish the gzip stream to get the final compressed bytes.
-        let encoder = builder.into_inner()?;
-        let bytes = encoder.finish()?;
+        let bytes = builder.into_inner()?.finish()?;
         Ok((bytes, filename))
     }
 
@@ -151,73 +133,47 @@ impl Repository {
 
                 builder.append_data(&mut header, &path, &data[..])?;
             }
-            // symlinks (mode.is_link()) intentionally skipped here — add
-            // handling if you need them (header.set_entry_type(EntryType::Symlink)
-            // + set_link_name to the blob content as the target path).
         }
         Ok(())
     }
 
-    /// Resolves a relative repository path on `current_ref` to either a folder listing (`PathView::Tree`)
-    /// or a file view (`PathView::Blob`).
     pub fn resolve_path(&self, current_ref: &Ref, path: &str) -> anyhow::Result<PathView> {
         let gix_repo = self.gix();
-        let commit = Commit::from_gix(
-            gix_repo
-                .find_reference(&current_ref.name)?
-                .peel_to_commit()?,
-        )?;
+        let root_tree = Self::root_tree(&gix_repo, current_ref)?;
         let path = path.trim_matches('/');
 
         if path.is_empty() {
-            return Ok(PathView::Tree(commit.tree("")?));
+            return Ok(PathView::Tree(tree::read_entries(&root_tree, "")?));
         }
 
-        let root_tree = commit.gix.tree().context("failed to get root tree")?;
-        let entry = root_tree
-            .lookup_entry_by_path(path)
-            .with_context(|| format!("failed lookup for path: {path}"))?
-            .with_context(|| format!("path not found: {path}"))?;
-
+        let entry = Self::lookup_entry(&root_tree, path)?;
         let mode = entry.mode();
+
         match mode.kind() {
             EntryKind::Tree => {
-                let entries = commit.tree(path)?;
-                Ok(PathView::Tree(entries))
+                let subtree = entry.object()?.into_tree();
+                Ok(PathView::Tree(tree::read_entries(&subtree, path)?))
             }
             EntryKind::Blob | EntryKind::BlobExecutable => {
-                let blob = entry
-                    .object()
-                    .context("failed to load blob object")?
-                    .try_into_blob()
-                    .map_err(|_| anyhow::anyhow!("entry is not a blob"))?;
-
-                let id = entry.oid().to_string();
-                let size = blob.data.len() as u64;
-
-                // Try decoding as UTF-8 text; if it contains non-UTF-8 bytes, treat it as binary (None).
+                let blob = entry.object()?.into_blob();
                 let lines = std::str::from_utf8(&blob.data)
                     .ok()
-                    .map(|s| s.lines().map(str::to_string).collect());
+                    .map(|s| crate::syntax_highlight::highlight_lines(s, path));
 
                 Ok(PathView::Blob(Blob {
-                    id,
+                    id: entry.oid().to_string(),
                     mode: mode.value() as u32,
-                    size,
+                    size: blob.data.len() as u64,
                     lines,
                 }))
             }
-            EntryKind::Link => {
-                anyhow::bail!("symlinks are not yet supported for direct viewing")
-            }
+            EntryKind::Link => anyhow::bail!("symlinks are not yet supported for direct viewing"),
             EntryKind::Commit => {
                 anyhow::bail!("path resolves to a submodule, not a viewable file/dir")
             }
         }
     }
 
-    /// Reads the raw bytes of a file (`Blob`) at `path` without splitting lines or cloning buffers.
-    /// Returns `Ok(None)` if `path` points to a directory (`Tree`).
     pub fn read_raw_blob(&self, current_ref: &Ref, path: &str) -> anyhow::Result<Option<Vec<u8>>> {
         let path = path.trim_matches('/');
         if path.is_empty() {
@@ -225,25 +181,13 @@ impl Repository {
         }
 
         let gix_repo = self.gix();
-        let root_tree = gix_repo
-            .find_reference(&current_ref.name)?
-            .peel_to_tree()
-            .context("failed to get root tree")?;
-
-        let entry = root_tree
-            .lookup_entry_by_path(path)
-            .with_context(|| format!("failed lookup for path: {path}"))?
-            .with_context(|| format!("path not found: {path}"))?;
+        let root_tree = Self::root_tree(&gix_repo, current_ref)?;
+        let entry = Self::lookup_entry(&root_tree, path)?;
 
         match entry.mode().kind() {
             EntryKind::Tree => Ok(None),
             EntryKind::Blob | EntryKind::BlobExecutable => {
-                let blob = entry
-                    .object()
-                    .context("failed to load blob object")?
-                    .try_into_blob()
-                    .map_err(|_| anyhow::anyhow!("entry is not a blob"))?;
-                // `.detach().data` moves the underlying Vec<u8> out of the gix Blob without cloning.
+                let blob = entry.object()?.into_blob();
                 Ok(Some(blob.detach().data))
             }
             EntryKind::Link => anyhow::bail!("symlinks are not yet supported for direct viewing"),
@@ -251,5 +195,25 @@ impl Repository {
                 anyhow::bail!("path resolves to a submodule, not a viewable file/dir")
             }
         }
+    }
+
+    fn root_tree<'a>(
+        gix_repo: &'a gix::Repository,
+        current_ref: &Ref,
+    ) -> anyhow::Result<gix::Tree<'a>> {
+        gix_repo
+            .find_reference(&current_ref.name)?
+            .peel_to_tree()
+            .context("failed to get root tree")
+    }
+
+    fn lookup_entry<'a>(
+        root_tree: &gix::Tree<'a>,
+        path: &str,
+    ) -> anyhow::Result<gix::object::tree::Entry<'a>> {
+        root_tree
+            .lookup_entry_by_path(path)
+            .with_context(|| format!("failed lookup for path: {path}"))?
+            .with_context(|| format!("path not found: {path}"))
     }
 }

@@ -12,6 +12,7 @@ pub mod git;
 pub mod markdown;
 pub mod prelude;
 pub mod routes;
+pub mod syntax_highlight;
 pub mod time;
 
 #[actix_web::main]
@@ -25,7 +26,6 @@ async fn main() -> Result<(), Error> {
             .service(routes::r#static::files)
             .service(routes::git::git_info_refs)
             .service(routes::git::git_upload_pack)
-            .service(routes::git::git_receive_pack)
             .service(routes::repository::diff::patch)
             .service(routes::repository::snapshot::download)
             .service(routes::page)

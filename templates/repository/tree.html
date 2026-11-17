@@ -77,7 +77,7 @@
             {% for line in lines %}
               <tr>
                 <td class="line-no">{{ loop.index }}</td>
-                <td class="line-content"><pre>{{ line }}</pre></td>
+                <td class="line-content"><pre>{{ line|safe }}</pre></td>
               </tr>
             {% endfor %}
           </tbody>

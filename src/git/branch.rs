@@ -1,32 +1,23 @@
-use crate::{git::GitSignature, prelude::*, time::Time};
+use crate::{git::GitSignature, prelude::*};
 use gix::Reference;
 
 pub struct Branch<'repo> {
     pub name: String,
     pub last_commit: Commit<'repo>,
     pub author: GitSignature,
-    pub time: Time,
-    pub gix: Reference<'repo>,
 }
 
 impl<'repo> Branch<'repo> {
     pub fn from_gix(mut reference: Reference<'repo>) -> Result<Branch<'repo>, Error> {
-        let commit = reference.peel_to_commit()?;
-        let author = GitSignature::from_gix(commit.author()?);
-        let time = Time::new(commit.time()?);
-        let last_commit = Commit::from_gix(commit)?;
+        let name = reference.name().shorten().to_string();
+        let last_commit = Commit::from_gix(reference.peel_to_commit()?)?;
+        let author = last_commit.author.clone();
 
         Ok(Branch {
-            name: reference.name().shorten().to_string(),
+            name,
             last_commit,
             author,
-            time,
-            gix: reference,
         })
-    }
-
-    pub fn is_head(&self, repo: &Repository) -> Result<bool, Error> {
-        Ok(repo.head_branch_name()? == self.name)
     }
 }
 
@@ -50,7 +41,7 @@ impl Repository {
         let references = gix_repo.references()?;
         let gix_branches = references.local_branches()?;
 
-        let mut branches: Vec<Branch> = Vec::new();
+        let mut branches = Vec::new();
         let mut has_next = false;
 
         for (i, branch) in gix_branches.skip(offset).enumerate() {
@@ -58,9 +49,7 @@ impl Repository {
                 has_next = true;
                 break;
             }
-
-            let branch = branch?;
-            branches.push(Branch::from_gix(branch)?);
+            branches.push(Branch::from_gix(branch?)?);
         }
         Ok((branches, has_next))
     }
@@ -68,14 +57,9 @@ impl Repository {
     pub fn branch_names(&self) -> Result<Vec<String>, Error> {
         let gix_repo = self.gix();
         let references = gix_repo.references()?;
-        let gix_branches = references.local_branches()?;
-
-        let mut names: Vec<String> = Vec::new();
-
-        for branch in gix_branches {
-            let branch = branch?;
-            names.push(branch.name().shorten().to_string());
-        }
-        Ok(names)
+        references
+            .local_branches()?
+            .map(|b| Ok(b?.name().shorten().to_string()))
+            .collect()
     }
 }

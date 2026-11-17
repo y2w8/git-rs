@@ -1,5 +1,4 @@
-use std::str::FromStr;
-use std::{borrow::Cow, collections::HashMap};
+use std::{borrow::Cow, collections::HashMap, str::FromStr};
 
 use gix::{bstr::BStr, utils::AsBStr};
 
@@ -12,24 +11,18 @@ pub struct Commit<'repo> {
     pub author: GitSignature,
     pub committer: GitSignature,
     pub time: Time,
-
     pub gix: gix::Commit<'repo>,
 }
 
 impl<'repo> Commit<'repo> {
     pub fn from_gix(gix: gix::Commit<'_>) -> Result<Commit<'_>, Error> {
-        let commit_id = gix.id().to_string();
-
-        let tree_id = gix.tree_id()?.to_string();
-        let parents = gix.parent_ids().map(|id| id.to_string()).collect();
         Ok(Commit {
-            id: commit_id,
-            tree_id,
-            parents,
+            id: gix.id().to_string(),
+            tree_id: gix.tree_id()?.to_string(),
+            parents: gix.parent_ids().map(|id| id.to_string()).collect(),
             author: GitSignature::from_gix(gix.author()?),
             committer: GitSignature::from_gix(gix.committer()?),
             time: Time::new(gix.time()?),
-
             gix,
         })
     }
@@ -52,14 +45,12 @@ impl<'repo> Commit<'repo> {
     }
 
     pub fn is_head(&self, repo: &Repository) -> Result<bool, Error> {
-        let head_commit_id: Option<String> =
-            repo.gix().head_commit().ok().map(|c| c.id().to_string());
-        Ok(head_commit_id.as_deref() == Some(&self.id))
+        let head_id = repo.gix().head_id().ok().map(|id| id.to_string());
+        Ok(head_id.as_deref() == Some(&self.id))
     }
 }
 
 impl Repository {
-    /// Looks up a Commit by its 40-character hex SHA-1 hash.
     pub fn find_commit<'repo>(
         &self,
         gix_repo: &'repo gix::Repository,
@@ -69,8 +60,6 @@ impl Repository {
         Commit::from_gix(gix_repo.find_commit(oid)?)
     }
 
-    /// Resolves a Commit either from an explicit `?id=<sha>` query parameter,
-    /// or by peeling the active branch/tag reference (`current_ref`) to its latest commit.
     pub fn resolve_commit<'repo>(
         &self,
         gix_repo: &'repo gix::Repository,
@@ -85,7 +74,6 @@ impl Repository {
         }
     }
 
-    /// Returns the latest commit on `HEAD` (or falls back to the first valid reference in the repo).
     pub fn last_commit<'repo>(
         &self,
         gix_repo: &'repo gix::Repository,
@@ -101,14 +89,12 @@ impl Repository {
         Ok(None)
     }
 
-    /// Builds a map of `commit_sha -> [branch_names]` for every local branch (`refs/heads/*`).
     pub fn branch_tips_by_commit(&self) -> Result<HashMap<String, Vec<String>>, Error> {
         let gix_repo = self.gix();
         let references = gix_repo.references()?;
-        let local_branches = references.local_branches()?;
-
         let mut map: HashMap<String, Vec<String>> = HashMap::new();
-        for branch in local_branches {
+
+        for branch in references.local_branches()? {
             let mut branch = branch?;
             let commit_id = branch.peel_to_commit()?.id().to_string();
             map.entry(commit_id)
@@ -118,8 +104,6 @@ impl Repository {
         Ok(map)
     }
 
-    /// Walks the commit graph backwards starting from `current_ref` (like `git log`),
-    /// sorted newest-first by commit timestamp, with optional filtering and pagination.
     pub fn commits<'repo>(
         &self,
         gix_repo: &'repo gix::Repository,
@@ -128,9 +112,7 @@ impl Repository {
         limit: usize,
         filter: Option<&dyn Fn(&Commit) -> bool>,
     ) -> Result<(Vec<Commit<'repo>>, bool), Error> {
-        // 1. Parse the branch/tag name (e.g. "main") into its starting commit ObjectId
         let start = gix_repo.rev_parse_single(current_ref.name.as_bstr())?;
-        // 2. Walk parent links backwards from `start`, ordered by commit time
         let revwalk = gix_repo
             .rev_walk([start])
             .sorting(gix::revision::walk::Sorting::ByCommitTime(
@@ -138,14 +120,12 @@ impl Repository {
             ))
             .all()?;
 
-        let mut commits: Vec<Commit> = Vec::new();
+        let mut commits = Vec::new();
         let mut has_next = false;
         let mut matched = 0usize;
 
         for rev in revwalk {
-            let rev = rev?;
-            let object = rev.object()?;
-            let commit = Commit::from_gix(object)?;
+            let commit = Commit::from_gix(rev?.object()?)?;
             if let Some(f) = filter
                 && !f(&commit)
             {

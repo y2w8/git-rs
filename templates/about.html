@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}y2w8 Repos{% endblock %}
+{% block title %}y2w8 Repos — about{% endblock %}
 
 {% block header %}
   {{ macros::header() }}
@@ -16,5 +16,29 @@
 {% endblock %}
 
 {% block content %}
-Hello!
+<div class="readme">
+  <h2>About</h2>
+  <p>
+    This is my personal Git server where I host my projects and experiments.
+    All repositories here are public and can be cloned over HTTPS:
+  </p>
+  <pre><code>git clone https://git.y2w8.online/&lt;repo&gt;</code></pre>
+
+  <h2>Contributing</h2>
+  <p>
+    If you find a bug or want to send a change, you can generate a patch with Git
+    and email it to <a href="mailto:yo2w86@gmail.com">yo2w86@gmail.com</a>:
+  </p>
+  <pre><code>git clone https://git.y2w8.online/&lt;repo&gt;
+cd &lt;repo&gt;
+# make your changes and commit them
+git commit -am "describe your change"
+git format-patch origin/main</code></pre>
+  <p>
+    Then email the generated <code>.patch</code> file to
+    <a href="mailto:yo2w86@gmail.com">yo2w86@gmail.com</a>.
+    Some repositories are also mirrored on <a href="https://github.com/y2w8">GitHub</a>,
+    so you can open a pull request or issue there if you prefer.
+  </p>
+</div>
 {% endblock %}

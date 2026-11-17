@@ -1,14 +1,50 @@
 use std::collections::HashMap;
 
-use pulldown_cmark::{CowStr, Event, LinkType, Options, Parser, Tag, TagEnd, html};
+use pulldown_cmark::{CodeBlockKind, CowStr, Event, LinkType, Options, Parser, Tag, TagEnd, html};
+
+use crate::syntax_highlight;
 
 pub fn render(raw: &str) -> String {
     let events: Vec<Event> = Parser::new_ext(raw, Options::all()).collect();
     let events = link_headings(events);
+    let events = highlight_code_blocks(events);
 
     let mut out = String::new();
     html::push_html(&mut out, events.into_iter());
     out
+}
+
+fn highlight_code_blocks(events: Vec<Event<'_>>) -> Vec<Event<'_>> {
+    let mut output = Vec::with_capacity(events.len());
+    let mut code_lang: Option<String> = None;
+    let mut code_buf = String::new();
+
+    for event in events {
+        match event {
+            Event::Start(Tag::CodeBlock(kind)) => {
+                let lang = match kind {
+                    CodeBlockKind::Fenced(lang) => {
+                        lang.split_whitespace().next().unwrap_or("").to_string()
+                    }
+                    CodeBlockKind::Indented => String::new(),
+                };
+                code_lang = Some(lang);
+                code_buf.clear();
+            }
+            Event::Text(text) if code_lang.is_some() => {
+                code_buf.push_str(&text);
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                if let Some(lang) = code_lang.take() {
+                    let highlighted = syntax_highlight::highlight_block(&code_buf, &lang);
+                    output.push(Event::Html(CowStr::from(highlighted)));
+                }
+            }
+            other => output.push(other),
+        }
+    }
+
+    output
 }
 
 fn link_headings(events: Vec<Event<'_>>) -> Vec<Event<'_>> {

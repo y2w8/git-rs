@@ -110,8 +110,8 @@
             </span>
             {{ branch.author.name }}
           </td>
-          {% let time = branch.author.time.format_relative() %}
-          <td class="{{ time.1 }}" title="{{ branch.author.time.format() }}">{{ time.0 }}</td>
+          {% let time = branch.last_commit.committer.time.format_relative() %}
+          <td class="{{ time.1 }}" title="{{ branch.last_commit.committer.time.format() }}">{{ time.0 }}</td>
         </tr>
       {% endfor %}
     <tr class="no-background">
@@ -205,8 +205,8 @@
     <tbody>
       {% for commit in commits %}
         <tr>
-          {% let time = commit.author.time.format_relative() %}
-          <td class="{{ time.1 }}" title="{{ commit.author.time.format() }}">{{ time.0 }}</td>
+          {% let time = commit.committer.time.format_relative() %}
+          <td class="{{ time.1 }}" title="{{ commit.committer.time.format() }}">{{ time.0 }}</td>
           <td>
             <a href="/{{ repo.name }}/commit/?id={{ commit.id }}">{{ commit.summary()? | truncate(80)}}</a>
             {% if commit.is_head(repo)? %}<a href="/{{ repo.name }}/commit/?id={{ commit.id }}" class="badge_head">HEAD</a>{% endif %}

@@ -90,8 +90,8 @@ a {
 a:hover,
 a:active,
 a.active {
-  color: var(--crust);
-  background: var(--peach);
+  color: var(--crust) !important;
+  background: var(--peach) !important;
 }
 
 a:focus-visible,
@@ -276,6 +276,13 @@ td.sub {
   color: var(--text);
   padding: 0.25rem 0.6rem;
   margin-right: 0.15rem;
+}
+
+.tabs a:hover,
+.tabs a:active,
+.tabs a.active {
+  color: var(--crust);
+  background: var(--peach);
 }
 
 .tree-breadcrumb {
@@ -697,4 +704,95 @@ pre.diff {
 .readme hr {
   border: none;
   border-top: 1px solid var(--surface1);
+}
+
+/* ==========================================================================
+   10. Syntax Highlighting (Catppuccin Mocha — ~/.config/nvim/lua/themes/)
+   ========================================================================== */
+.hl-comment {
+  color: var(--surface2);
+  font-style: italic;
+}
+
+.hl-keyword {
+  color: var(--mauve);
+  font-style: italic;
+}
+
+.hl-include {
+  color: var(--blue);
+  font-style: italic;
+}
+
+.hl-function {
+  color: var(--blue);
+  font-weight: bold;
+}
+
+.hl-function-builtin {
+  color: var(--peach);
+  font-weight: bold;
+}
+
+.hl-macro {
+  color: var(--pink);
+  font-weight: bold;
+}
+
+.hl-type {
+  color: var(--yellow);
+  font-weight: bold;
+}
+
+.hl-type-builtin {
+  color: var(--mauve);
+}
+
+.hl-module {
+  color: var(--yellow);
+  font-style: italic;
+}
+
+.hl-constant,
+.hl-number,
+.hl-boolean,
+.hl-attribute {
+  color: var(--peach);
+}
+
+.hl-string {
+  color: var(--green);
+}
+
+.hl-escape {
+  color: var(--pink);
+}
+
+.hl-label {
+  color: var(--yellow);
+}
+
+.hl-property {
+  color: var(--lavender);
+}
+
+.hl-parameter {
+  color: var(--maroon);
+}
+
+.hl-variable,
+.hl-punctuation {
+  color: var(--red);
+}
+
+.hl-operator {
+  color: var(--sky);
+}
+
+.hl-tag {
+  color: var(--blue);
+}
+
+.hl-tag-delimiter {
+  color: var(--teal);
 }
