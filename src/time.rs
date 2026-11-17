@@ -31,6 +31,10 @@ impl Time {
         Self { gix }
     }
 
+    pub fn seconds(&self) -> i64 {
+        self.gix.seconds
+    }
+
     pub fn format(&self) -> String {
         let dt: DateTime<Utc> = Utc.timestamp_opt(self.gix.seconds, 0).unwrap();
         let offset = FixedOffset::east_opt(self.gix.offset).unwrap();

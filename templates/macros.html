@@ -111,7 +111,7 @@
             {{ branch.author.name }}
           </td>
           {% let time = branch.last_commit.committer.time.format_relative() %}
-          <td class="{{ time.1 }}" title="{{ branch.last_commit.committer.time.format() }}">{{ time.0 }}</td>
+          <td class="{{ time.1 }}" data-sort="-{{ branch.last_commit.committer.time.seconds() }}" title="{{ branch.last_commit.committer.time.format() }}">{{ time.0 }}</td>
         </tr>
       {% endfor %}
     <tr class="no-background">
@@ -142,7 +142,7 @@
 {% macro tags(tags, tags_has_more, has_prev, page, mode) %}
     <thead>
       <tr>
-        <th>Tag</th>
+        <th class="sort-desc" aria-sort="descending">Tag</th>
         <th>Download</th>
         <th>Author</th>
         <th>Age</th>
@@ -165,8 +165,7 @@
             {% endif %}
             </td>
             {% let time = tag.time.format_relative() %}
-            <td class="
-              {{ time.1 }}" title="{{ tag.time.format() }}">{{ time.0 }}</td>
+            <td class="{{ time.1 }}" data-sort="-{{ tag.time.seconds() }}" title="{{ tag.time.format() }}">{{ time.0 }}</td>
         </tr>
       {% endfor %}
       <tr class="no-background">
@@ -197,7 +196,7 @@
 {% macro commits(commits, commits_has_more, has_prev, page, mode) %}
     <thead>
       <tr>
-        <th>Age</th>
+        <th class="sort-asc" aria-sort="ascending">Age</th>
         <th>Commit message</th>
         <th>Author</th>
       </tr>
@@ -206,7 +205,7 @@
       {% for commit in commits %}
         <tr>
           {% let time = commit.committer.time.format_relative() %}
-          <td class="{{ time.1 }}" title="{{ commit.committer.time.format() }}">{{ time.0 }}</td>
+          <td class="{{ time.1 }}" data-sort="-{{ commit.committer.time.seconds() }}" title="{{ commit.committer.time.format() }}">{{ time.0 }}</td>
           <td>
             <a href="/{{ repo.name }}/commit/?id={{ commit.id }}">{{ commit.summary()? | truncate(80)}}</a>
             {% if commit.is_head(repo)? %}<a href="/{{ repo.name }}/commit/?id={{ commit.id }}" class="badge_head">HEAD</a>{% endif %}

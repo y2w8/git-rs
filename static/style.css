@@ -147,6 +147,48 @@ th {
   border-bottom: 1px solid var(--surface1);
 }
 
+main table thead th {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: background-color 0.1s ease, color 0.1s ease;
+}
+
+main table thead th:hover {
+  background: var(--one_bg);
+  color: var(--rosewater);
+}
+
+main table thead th::after {
+  content: ' ⇅';
+  font-size: 0.75em;
+  color: var(--overlay0);
+  opacity: 0;
+  margin-left: 0.35rem;
+}
+
+main table thead th:hover::after {
+  opacity: 0.75;
+}
+
+main table thead th.sort-asc,
+main table thead th.sort-desc {
+  background: var(--one_bg);
+  border-bottom: 2px solid var(--peach);
+}
+
+main table thead th.sort-asc::after {
+  content: ' ▲';
+  color: var(--green);
+  opacity: 1;
+}
+
+main table thead th.sort-desc::after {
+  content: ' ▼';
+  color: var(--red);
+  opacity: 1;
+}
+
 td {
   text-align: left;
   white-space: nowrap;

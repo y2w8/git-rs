@@ -86,7 +86,15 @@ pub async fn page(query: web::Query<PageQuery>, data: web::Data<App>) -> ActixRe
 
         if let (qt, Some(value)) = (query.query_type.as_deref(), query.value.as_deref()) {
             let value_lower = value.to_lowercase();
-            repos.sort_by_key(|a| relevance(a, qt, &value_lower));
+            repos.sort_by_key(|a| {
+                (
+                    relevance(a, qt, &value_lower),
+                    std::cmp::Reverse(a.last_commit_timestamp()),
+                )
+            });
+        } else {
+            // Auto-sort repositories by Idle/Age (most recently updated first)
+            repos.sort_by_key(|a| std::cmp::Reverse(a.last_commit_timestamp()));
         }
         ReposPage { repos }.render()
     };

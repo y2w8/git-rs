@@ -59,7 +59,7 @@
                     <a href="/{{ repo.name }}/tree/{{ entry.path }}{{ parameters }}">{{ entry.name }}</a>
                 {% endmatch %}
               </td>
-              <td class="size">{{ entry.size_display() }}</td>
+              <td class="size" data-sort="{{ entry.size.unwrap_or(0) }}">{{ entry.size_display() }}</td>
             </tr>
           {% endfor %}
         </tbody>

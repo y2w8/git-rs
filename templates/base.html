@@ -29,5 +29,84 @@
           </main>
           {% endblock %}
         </div>
+      <script>
+        document.querySelectorAll("main table").forEach((table) => {
+          const headers = table.querySelectorAll("thead th");
+          const tbody = table.querySelector("tbody");
+          if (!headers.length || !tbody) return;
+
+          const cellValue = (row, idx) => {
+            const cell = row.children[idx];
+            if (!cell) return { num: NaN, text: "" };
+            const rawSort = cell.getAttribute("data-sort");
+            if (rawSort !== null) {
+              return { num: Number(rawSort), text: rawSort };
+            }
+            const text = cell.textContent.trim();
+            return { num: NaN, text };
+          };
+
+          headers.forEach((th, colIdx) => {
+            th.setAttribute("tabindex", "0");
+            th.setAttribute("role", "columnheader");
+            if (!th.hasAttribute("aria-sort")) {
+              th.setAttribute("aria-sort", "none");
+            }
+
+            const applySort = () => {
+              // 1st click -> ascending (top-down), 2nd click -> descending (bottom-up)
+              const nextDir = th.classList.contains("sort-asc") ? "desc" : "asc";
+              const factor = nextDir === "asc" ? 1 : -1;
+
+              headers.forEach((h) => {
+                h.classList.remove("sort-asc", "sort-desc");
+                h.setAttribute("aria-sort", "none");
+              });
+              th.classList.add(nextDir === "asc" ? "sort-asc" : "sort-desc");
+              th.setAttribute(
+                "aria-sort",
+                nextDir === "asc" ? "ascending" : "descending"
+              );
+
+              const allRows = Array.from(tbody.querySelectorAll(":scope > tr"));
+              const topPinned = allRows.filter((r) =>
+                r.classList.contains("tree-parent")
+              );
+              const bottomPinned = allRows.filter((r) =>
+                r.classList.contains("no-background")
+              );
+              const sortableRows = allRows.filter(
+                (r) =>
+                  !r.classList.contains("tree-parent") &&
+                  !r.classList.contains("no-background")
+              );
+
+              sortableRows.sort((rowA, rowB) => {
+                const a = cellValue(rowA, colIdx);
+                const b = cellValue(rowB, colIdx);
+                if (!Number.isNaN(a.num) && !Number.isNaN(b.num)) {
+                  return (a.num - b.num) * factor;
+                }
+                return (
+                  a.text.localeCompare(b.text, undefined, {
+                    numeric: true,
+                    sensitivity: "base",
+                  }) * factor
+                );
+              });
+
+              tbody.append(...topPinned, ...sortableRows, ...bottomPinned);
+            };
+
+            th.addEventListener("click", applySort);
+            th.addEventListener("keydown", (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                applySort();
+              }
+            });
+          });
+        });
+      </script>
   </body>
 </html>

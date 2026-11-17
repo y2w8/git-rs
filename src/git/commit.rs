@@ -89,6 +89,17 @@ impl Repository {
         Ok(None)
     }
 
+    /// Returns the committer timestamp (in seconds) of the repository's latest commit,
+    /// or `i64::MIN` if the repository has no commits yet.
+    pub fn last_commit_timestamp(&self) -> i64 {
+        let gix_repo = self.gix();
+        self.last_commit(&gix_repo)
+            .ok()
+            .flatten()
+            .map(|c| c.committer.time.seconds())
+            .unwrap_or(i64::MIN)
+    }
+
     pub fn branch_tips_by_commit(&self) -> Result<HashMap<String, Vec<String>>, Error> {
         let gix_repo = self.gix();
         let references = gix_repo.references()?;
