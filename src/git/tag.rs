@@ -81,19 +81,24 @@ impl Repository {
     pub fn tags(&self, offset: usize, limit: usize) -> anyhow::Result<(Vec<Tag>, bool)> {
         let gix_repo = self.gix();
         let references = gix_repo.references()?;
-        let gix_tags = references.tags()?;
+        let mut all_tags: Vec<Tag> = references
+            .tags()?
+            .map(|rev| {
+                let rev = rev.map_err(|e| anyhow::anyhow!(e))?;
+                Tag::from_gix(rev)
+            })
+            .collect::<anyhow::Result<Vec<_>>>()?;
 
-        let mut tags = Vec::new();
-        let mut has_next = false;
+        // Sort tags descending (newest / highest version first, e.g. v0.2.0 -> v0.1.1 -> v0.1.0)
+        all_tags.sort_by(|a, b| {
+            b.time
+                .seconds()
+                .cmp(&a.time.seconds())
+                .then_with(|| b.name.cmp(&a.name))
+        });
 
-        for (i, rev) in gix_tags.skip(offset).enumerate() {
-            if i >= limit {
-                has_next = true;
-                break;
-            }
-            let rev = rev.map_err(|e| anyhow::anyhow!(e))?;
-            tags.push(Tag::from_gix(rev)?);
-        }
+        let has_next = all_tags.len() > offset.saturating_add(limit);
+        let tags = all_tags.into_iter().skip(offset).take(limit).collect();
         Ok((tags, has_next))
     }
 }

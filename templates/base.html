@@ -53,19 +53,17 @@
               th.setAttribute("aria-sort", "none");
             }
 
-            const applySort = () => {
-              // 1st click -> ascending (top-down), 2nd click -> descending (bottom-up)
-              const nextDir = th.classList.contains("sort-asc") ? "desc" : "asc";
-              const factor = nextDir === "asc" ? 1 : -1;
+            const sortTableBy = (dir) => {
+              const factor = dir === "asc" ? 1 : -1;
 
               headers.forEach((h) => {
                 h.classList.remove("sort-asc", "sort-desc");
                 h.setAttribute("aria-sort", "none");
               });
-              th.classList.add(nextDir === "asc" ? "sort-asc" : "sort-desc");
+              th.classList.add(dir === "asc" ? "sort-asc" : "sort-desc");
               th.setAttribute(
                 "aria-sort",
-                nextDir === "asc" ? "ascending" : "descending"
+                dir === "asc" ? "ascending" : "descending"
               );
 
               const allRows = Array.from(tbody.querySelectorAll(":scope > tr"));
@@ -98,11 +96,23 @@
               tbody.append(...topPinned, ...sortableRows, ...bottomPinned);
             };
 
-            th.addEventListener("click", applySort);
+            // Apply initial sort immediately on page load if header has sort-asc or sort-desc
+            if (th.classList.contains("sort-desc")) {
+              sortTableBy("desc");
+            } else if (th.classList.contains("sort-asc")) {
+              sortTableBy("asc");
+            }
+
+            const toggleSort = () => {
+              const nextDir = th.classList.contains("sort-asc") ? "desc" : "asc";
+              sortTableBy(nextDir);
+            };
+
+            th.addEventListener("click", toggleSort);
             th.addEventListener("keydown", (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                applySort();
+                toggleSort();
               }
             });
           });
