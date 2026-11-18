@@ -18,6 +18,11 @@ pub mod time;
 #[actix_web::main]
 async fn main() -> Result<(), Error> {
     let args = Args::parse();
+
+    if args.install_service {
+        return install_systemd_service(&args);
+    }
+
     let app = web::Data::new(App::new(args.repos_dir.to_string()).await);
 
     HttpServer::new(move || {
@@ -43,4 +48,34 @@ async fn main() -> Result<(), Error> {
     .bind((args.url, args.port))?
     .run()
     .await
+}
+
+fn install_systemd_service(args: &Args) -> Result<(), Error> {
+    let exe = std::env::current_exe()?;
+    let service = format!(
+        "[Unit]\n\
+         Description=git-rs — Lightweight Git web frontend\n\
+         After=network-online.target\n\
+         Wants=network-online.target\n\
+         \n\
+         [Service]\n\
+         Type=simple\n\
+         User=root\n\
+         WorkingDirectory={repos_dir}\n\
+         ExecStart={exe} --url {url} --port {port} --repos-dir {repos_dir}\n\
+         Restart=on-failure\n\
+         RestartSec=5\n\
+         AmbientCapabilities=CAP_NET_BIND_SERVICE\n\
+         \n\
+         [Install]\n\
+         WantedBy=multi-user.target\n",
+        exe = exe.display(),
+        url = args.url,
+        port = args.port,
+        repos_dir = args.repos_dir,
+    );
+
+    std::fs::write("/etc/systemd/system/git-rs.service", service)?;
+    println!("Installed /etc/systemd/system/git-rs.service");
+    Ok(())
 }

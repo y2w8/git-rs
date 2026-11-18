@@ -16,7 +16,11 @@ pub struct Args {
     #[arg(short, long, value_name = "PORT", default_value_t = 80)]
     pub port: u16,
 
-    // Repositories directory
+    /// Repositories directory
     #[arg(short, long, value_name = "DIR", default_value = "/srv/git")]
     pub repos_dir: String,
+
+    /// Install and enable the systemd service (/etc/systemd/system/git-rs.service)
+    #[arg(long)]
+    pub install_service: bool,
 }
