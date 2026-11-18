@@ -43,17 +43,22 @@ For each bare repository in `/srv/git/<repo>`:
   git -C /srv/git/<repo> config gitweb.owner "your-name"
   ```
 
-## Building
+## Installation
+
+Install from crates.io or directly from the repository:
 
 ```sh
-cargo build --release
+# From crates.io
+cargo install git-rs
+
+# Or from a local checkout
+cargo install --path .
 ```
 
-To run as a `systemd` service, copy [`git-rs.service`](git-rs.service) to `/etc/systemd/system/` and enable it:
+To install and start the `systemd` service:
 
 ```sh
-sudo cp target/release/git-rs /usr/bin/git-rs
-sudo cp git-rs.service /etc/systemd/system/git-rs.service
+sudo $(which git-rs) --install-service --url 0.0.0.0 --port 80 --repos-dir /srv/git
 sudo systemctl daemon-reload
 sudo systemctl enable --now git-rs
 ```
