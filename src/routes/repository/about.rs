@@ -19,7 +19,9 @@ pub async fn page(
     let repo = data.get_repo(&path)?;
     let current_ref = Ref::resolve(&repo, &query)?;
     let branch_names = repo.branch_names()?;
-    let readme_html = repo.readme().map(|raw| markdown::render(&raw));
+    let readme_html = repo
+        .readme()
+        .map(|raw| markdown::render(&raw, &repo.name, &current_ref.name));
 
     render_html(&AboutPage {
         repo,

@@ -55,9 +55,10 @@ pub async fn raw(
     let current_ref = Ref::resolve(&repo, &query)?;
 
     match repo.read_raw_blob(&current_ref, &path)? {
-        Some(bytes) => Ok(HttpResponse::Ok()
-            .content_type("text/plain; charset=utf-8")
-            .body(bytes)),
+        Some(bytes) => {
+            let mime = mime_guess::from_path(&path).first_or_text_plain();
+            Ok(HttpResponse::Ok().content_type(mime.as_ref()).body(bytes))
+        }
         None => Ok(HttpResponse::BadRequest().body("path is a directory")),
     }
 }
