@@ -11,18 +11,35 @@ pub struct Commit<'repo> {
     pub author: GitSignature,
     pub committer: GitSignature,
     pub time: Time,
+    pub is_head: bool,
+    pub branch_tips: Vec<String>,
     pub gix: gix::Commit<'repo>,
 }
 
 impl<'repo> Commit<'repo> {
     pub fn from_gix(gix: gix::Commit<'_>) -> Result<Commit<'_>, Error> {
+        // Decode the raw commit object once instead of re-parsing it 5 times via
+        // `.tree_id()`, `.parent_ids()`, `.author()`, `.committer()`, and `.time()`.
+        let (tree_id, parents, author, committer) = {
+            let decoded = gix.decode()?;
+            (
+                decoded.tree().to_string(),
+                decoded.parents().map(|id| id.to_string()).collect(),
+                GitSignature::from_gix(decoded.author()?),
+                GitSignature::from_gix(decoded.committer()?),
+            )
+        };
+        let time = committer.time.clone();
+
         Ok(Commit {
             id: gix.id().to_string(),
-            tree_id: gix.tree_id()?.to_string(),
-            parents: gix.parent_ids().map(|id| id.to_string()).collect(),
-            author: GitSignature::from_gix(gix.author()?),
-            committer: GitSignature::from_gix(gix.committer()?),
-            time: Time::new(gix.time()?),
+            tree_id,
+            parents,
+            author,
+            committer,
+            time,
+            is_head: false,
+            branch_tips: Vec::new(),
             gix,
         })
     }
@@ -35,18 +52,16 @@ impl<'repo> Commit<'repo> {
         Ok(self.gix.message()?.body.unwrap_or(BStr::new("")))
     }
 
-    pub fn branch_name(&self, repo: &Repository) -> Result<Option<String>, Error> {
-        Ok(self.branch_tips(repo)?.into_iter().next())
+    pub fn branch_name(&self, _repo: &Repository) -> Result<Option<&str>, Error> {
+        Ok(self.branch_tips.first().map(String::as_str))
     }
 
-    pub fn branch_tips(&self, repo: &Repository) -> Result<Vec<String>, Error> {
-        let branch_tips = repo.branch_tips_by_commit()?;
-        Ok(branch_tips.get(&self.id).cloned().unwrap_or_default())
+    pub fn branch_tips(&self, _repo: &Repository) -> Result<&[String], Error> {
+        Ok(&self.branch_tips)
     }
 
-    pub fn is_head(&self, repo: &Repository) -> Result<bool, Error> {
-        let head_id = repo.gix().head_id().ok().map(|id| id.to_string());
-        Ok(head_id.as_deref() == Some(&self.id))
+    pub fn is_head(&self, _repo: &Repository) -> Result<bool, Error> {
+        Ok(self.is_head)
     }
 }
 
@@ -66,12 +81,17 @@ impl Repository {
         id: Option<&str>,
         current_ref: &Ref,
     ) -> Result<Commit<'repo>, Error> {
-        if let Some(id) = id {
-            self.find_commit(gix_repo, id)
+        let mut commit = if let Some(id) = id {
+            self.find_commit(gix_repo, id)?
         } else {
             let mut reference = gix_repo.find_reference(&current_ref.name)?;
-            Commit::from_gix(reference.peel_to_commit()?)
-        }
+            Commit::from_gix(reference.peel_to_commit()?)?
+        };
+        let head_id = gix_repo.head_id().ok().map(|id| id.to_string());
+        let mut branch_tips = Self::branch_tips_from_repo(gix_repo)?;
+        commit.is_head = head_id.as_deref() == Some(&commit.id);
+        commit.branch_tips = branch_tips.remove(&commit.id).unwrap_or_default();
+        Ok(commit)
     }
 
     pub fn last_commit<'repo>(
@@ -89,19 +109,43 @@ impl Repository {
         Ok(None)
     }
 
+    /// Returns the committer `Time` of the repository's latest commit without allocating
+    /// a full `Commit` struct.
+    pub fn last_commit_time(&self) -> Option<Time> {
+        let gix_repo = self.gix();
+        if let Ok(commit) = gix_repo.head_commit()
+            && let Ok(sig) = commit.committer()
+            && let Ok(t) = sig.time()
+        {
+            return Some(Time::new(t));
+        }
+        for reference in gix_repo.references().ok()?.all().ok()? {
+            if let Ok(commit) = reference.ok()?.peel_to_commit()
+                && let Ok(sig) = commit.committer()
+                && let Ok(t) = sig.time()
+            {
+                return Some(Time::new(t));
+            }
+        }
+        None
+    }
+
     /// Returns the committer timestamp (in seconds) of the repository's latest commit,
     /// or `i64::MIN` if the repository has no commits yet.
     pub fn last_commit_timestamp(&self) -> i64 {
-        let gix_repo = self.gix();
-        self.last_commit(&gix_repo)
-            .ok()
-            .flatten()
-            .map(|c| c.committer.time.seconds())
+        self.last_commit_time()
+            .map(|t| t.seconds())
             .unwrap_or(i64::MIN)
     }
 
     pub fn branch_tips_by_commit(&self) -> Result<HashMap<String, Vec<String>>, Error> {
         let gix_repo = self.gix();
+        Self::branch_tips_from_repo(&gix_repo)
+    }
+
+    fn branch_tips_from_repo(
+        gix_repo: &gix::Repository,
+    ) -> Result<HashMap<String, Vec<String>>, Error> {
         let references = gix_repo.references()?;
         let mut map: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -131,12 +175,21 @@ impl Repository {
             ))
             .all()?;
 
-        let mut commits = Vec::new();
+        let head_id = gix_repo.head_id().ok().map(|id| id.to_string());
+        let mut branch_tips = Self::branch_tips_from_repo(gix_repo)?;
+
+        let mut commits = Vec::with_capacity(limit);
         let mut has_next = false;
         let mut matched = 0usize;
 
         for rev in revwalk {
-            let commit = Commit::from_gix(rev?.object()?)?;
+            let rev = rev?;
+            if filter.is_none() && matched < offset {
+                matched += 1;
+                continue;
+            }
+
+            let mut commit = Commit::from_gix(rev.object()?)?;
             if let Some(f) = filter
                 && !f(&commit)
             {
@@ -153,6 +206,8 @@ impl Repository {
                 break;
             }
 
+            commit.is_head = head_id.as_deref() == Some(&commit.id);
+            commit.branch_tips = branch_tips.remove(&commit.id).unwrap_or_default();
             commits.push(commit);
         }
 

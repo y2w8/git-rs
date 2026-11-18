@@ -52,16 +52,21 @@ impl PageQuery {
     }
 }
 
+struct RepoEntry {
+    repo: Repository,
+    last_time: Option<Time>,
+}
+
 #[derive(Template)]
 #[template(path = "repositorys.html")]
 struct ReposPage {
-    repos: Vec<Repository>,
+    repos: Vec<RepoEntry>,
 }
 
 #[get("/")]
 pub async fn page(query: web::Query<PageQuery>, data: web::Data<App>) -> ActixResult<HttpResponse> {
     let rendered = {
-        let mut repos: Vec<Repository> = {
+        let raw_repos: Vec<Repository> = {
             let guard = match data.repos.read() {
                 Ok(g) => g,
                 Err(e) => return Ok(HttpResponse::InternalServerError().body(e.to_string())),
@@ -84,17 +89,38 @@ pub async fn page(query: web::Query<PageQuery>, data: web::Data<App>) -> ActixRe
             }
         }; // guard dropped here
 
+        // Resolve last_commit_time once per repo for both sorting and template rendering
+        let mut repos: Vec<RepoEntry> = raw_repos
+            .into_iter()
+            .map(|repo| {
+                let last_time = repo.last_commit_time();
+                RepoEntry { repo, last_time }
+            })
+            .collect();
+
         if let (qt, Some(value)) = (query.query_type.as_deref(), query.value.as_deref()) {
             let value_lower = value.to_lowercase();
             repos.sort_by_key(|a| {
                 (
-                    relevance(a, qt, &value_lower),
-                    std::cmp::Reverse(a.last_commit_timestamp()),
+                    relevance(&a.repo, qt, &value_lower),
+                    std::cmp::Reverse(
+                        a.last_time
+                            .as_ref()
+                            .map(|t| t.seconds())
+                            .unwrap_or(i64::MIN),
+                    ),
                 )
             });
         } else {
             // Auto-sort repositories by Idle/Age (most recently updated first)
-            repos.sort_by_key(|a| std::cmp::Reverse(a.last_commit_timestamp()));
+            repos.sort_by_key(|a| {
+                std::cmp::Reverse(
+                    a.last_time
+                        .as_ref()
+                        .map(|t| t.seconds())
+                        .unwrap_or(i64::MIN),
+                )
+            });
         }
         ReposPage { repos }.render()
     };

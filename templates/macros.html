@@ -1,7 +1,7 @@
 {% macro header(repo: Option<&Repository> = None, branches: Vec<String> = Vec::new(), current_ref: Option<&Ref> = None) %}
   {% if let Some(repo) = repo && let Some(current_ref) = current_ref %}
     <tr>
-      <td class="logo" rowspan="2"><a href="/"><img src="/static/logo.png" alt="logo"></a></td>
+      <td class="logo" rowspan="2"><a href="/"><img src="/static/logo.png" width="64" height="64" alt="logo"></a></td>
       <td class="main"><a href="/">index</a> : <a title="{{ repo.name }}" href="/{{ repo.name }}/">{{ repo.name }}</a></td>
       <td class="form">
         <form method="get">
@@ -19,7 +19,7 @@
     </tr>
   {% else %}
     <tr>
-      <td class="logo" rowspan="2"><a href="/"><img src="/static/logo.png" alt="logo"></a></td>
+      <td class="logo" rowspan="2"><a href="/"><img src="/static/logo.png" width="64" height="64" alt="logo"></a></td>
       <td class="main">y2w8 Repos</td>
     </tr>
     <tr>
@@ -105,8 +105,8 @@
           <td class="msg"><span class="msg-text">{{ branch.last_commit.summary()? }}</span></td>
           <td class="author">
             <span class="avatar">
-              <img class="inline" src="{{ branch.author.avatar_url(20) }}">
-              <img class="onhover" src="{{ branch.author.avatar_url(128) }}">
+              <img class="inline" src="{{ branch.author.avatar_url(20) }}" width="18" height="18" loading="lazy" decoding="async" alt="">
+              <img class="onhover" src="{{ branch.author.avatar_url(128) }}" width="128" height="128" loading="lazy" decoding="async" alt="">
             </span>
             {{ branch.author.name }}
           </td>
@@ -158,8 +158,8 @@
           <td>
             {% if let Some(tagger) = tag.tagger %}
                 <span class="avatar">
-                  <img class="inline" src="{{ tagger.avatar_url(20) }}">
-                  <img class="onhover" src="{{ tagger.avatar_url(128) }}">
+                  <img class="inline" src="{{ tagger.avatar_url(20) }}" width="18" height="18" loading="lazy" decoding="async" alt="">
+                  <img class="onhover" src="{{ tagger.avatar_url(128) }}" width="128" height="128" loading="lazy" decoding="async" alt="">
                 </span>
                 {{ tagger.name }}
             {% endif %}
@@ -215,8 +215,8 @@
           </td>
           <td>
             <span class="avatar">
-              <img class="inline" src="{{ commit.author.avatar_url(20) }}">
-              <img class="onhover" src="{{ commit.author.avatar_url(128) }}">
+              <img class="inline" src="{{ commit.author.avatar_url(20) }}" width="18" height="18" loading="lazy" decoding="async" alt="">
+              <img class="onhover" src="{{ commit.author.avatar_url(128) }}" width="128" height="128" loading="lazy" decoding="async" alt="">
             </span>
             {{ commit.author.name }}
           </td>

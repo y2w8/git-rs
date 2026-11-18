@@ -33,23 +33,22 @@
         </tr>
     </thead>
     <tbody>
-        {% for repo in repos %}
+        {% for entry in repos %}
         <tr>
-            <td><a href="/{{ repo.name }}/">{{ repo.name }}</a></td>
-            <td><a href="/{{ repo.name }}/">{{ repo.description }}</a></td>
-            <td>{% if let Some(owner) = repo.owner %}{{ owner }}{% endif %}</td>
-            {% let gix_repo = repo.gix() %}
-            {% if let Some(last_commit) = repo.last_commit(gix_repo)? %}
-              {% let time = last_commit.committer.time.format_relative() %}
-              <td data-sort="-{{ last_commit.committer.time.seconds() }}">
-                <span class="{{ time.1 }}" title="{{ last_commit.committer.time.format() }}">{{ time.0 }}</span>
+            <td><a href="/{{ entry.repo.name }}/">{{ entry.repo.name }}</a></td>
+            <td><a href="/{{ entry.repo.name }}/">{{ entry.repo.description }}</a></td>
+            <td>{% if let Some(owner) = entry.repo.owner %}{{ owner }}{% endif %}</td>
+            {% if let Some(last_time) = entry.last_time %}
+              {% let time = last_time.format_relative() %}
+              <td data-sort="-{{ last_time.seconds() }}">
+                <span class="{{ time.1 }}" title="{{ last_time.format() }}">{{ time.0 }}</span>
               </td>
             {% else %}
               <td data-sort="999999999999">
                 <span class="stale">Unknown</span>
               </td>
             {% endif %}
-            <td><a href="/{{ repo.name }}/">summary</a><a href="/{{ repo.name }}/log/">log</a><a href="/{{ repo.name }}/tree/">tree</a></td>
+            <td><a href="/{{ entry.repo.name }}/">summary</a><a href="/{{ entry.repo.name }}/log/">log</a><a href="/{{ entry.repo.name }}/tree/">tree</a></td>
         </tr>
         {% endfor %}
     </tbody>

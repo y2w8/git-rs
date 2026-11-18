@@ -79,3 +79,27 @@ fn install_systemd_service(args: &Args) -> Result<(), Error> {
     println!("Installed /etc/systemd/system/git-rs.service");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+    use std::time::Instant;
+
+    #[test]
+    fn commit_list_populates_head_and_branch_tips_without_n_plus_one() {
+        let repo = Repository::open(Path::new(env!("CARGO_MANIFEST_DIR"))).unwrap();
+        let current_ref = Ref {
+            name: repo.head_branch_name().unwrap(),
+            is_head: true,
+        };
+        let gix_repo = repo.gix();
+
+        let start = Instant::now();
+        let (commits, _) = repo.commits(&gix_repo, &current_ref, 0, 50, None).unwrap();
+        assert!(!commits.is_empty());
+        assert!(commits[0].is_head(&repo).unwrap());
+        assert!(!commits[0].branch_tips(&repo).unwrap().is_empty());
+        assert!(start.elapsed().as_millis() < 100);
+    }
+}
