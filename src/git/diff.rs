@@ -440,8 +440,9 @@ struct PlainDiffFormatter;
 
 impl DiffFormatter for PlainDiffFormatter {
     fn file_header(&self, output: &mut String, data: fmt::Arguments<'_>) {
-        write!(output, r#"<span class="diff-file-header">{data}</span>"#).unwrap();
-        output.push('\n');
+        output.push_str(r#"<span class="diff-file-header">"#);
+        write!(output, "{data}").unwrap();
+        output.push_str("</span>\n");
     }
 
     fn write(&self, output: &mut String, class: &str, data: &str) {
@@ -466,8 +467,10 @@ impl DiffFormatter for PlainDiffFormatter {
         if is_null {
             "/dev/null".to_string()
         } else {
+            let escaped_path = v_htmlescape::escape(&rela_path.to_string()).to_string();
+            let escaped_rev = v_htmlescape::escape(rev_id).to_string();
             format!(
-                "{prefix}/<a class='{state}' href='/{repo_name}/diff/{rela_path}?id={rev_id}'>{rela_path}</a>"
+                "{prefix}/<a class='{state}' href='/{repo_name}/diff/{escaped_path}?id={escaped_rev}'>{escaped_path}</a>"
             )
         }
     }

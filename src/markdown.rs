@@ -174,7 +174,23 @@ fn is_github_asset_url(url: &str) -> bool {
         || (url.starts_with("https://github.com/") && url.contains("/assets/"))
 }
 
+fn escape_attr(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '&' => out.push_str("&amp;"),
+            '"' => out.push_str("&quot;"),
+            '\'' => out.push_str("&#39;"),
+            '<' => out.push_str("&lt;"),
+            '>' => out.push_str("&gt;"),
+            _ => out.push(c),
+        }
+    }
+    out
+}
+
 fn video_html(url: &str, fallback_to_img: bool) -> String {
+    let url = escape_attr(url);
     if fallback_to_img {
         format!(
             r#"<video class="readme-video" controls playsinline preload="metadata" src="{url}" onerror="const img=document.createElement('img');img.src=this.src;img.className='readme-img';this.replaceWith(img);"></video>"#
@@ -187,6 +203,8 @@ fn video_html(url: &str, fallback_to_img: bool) -> String {
 }
 
 fn github_asset_img_html(url: &str, alt: &str) -> String {
+    let url = escape_attr(url);
+    let alt = escape_attr(alt);
     format!(
         r#"<img class="readme-img" src="{url}" alt="{alt}" onerror="const v=document.createElement('video');v.src=this.src;v.controls=true;v.playsInline=true;v.preload='metadata';v.className='readme-video';this.replaceWith(v);">"#
     )

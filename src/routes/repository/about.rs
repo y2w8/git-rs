@@ -20,7 +20,7 @@ pub async fn page(
     let current_ref = Ref::resolve(&repo, &query)?;
     let branch_names = repo.branch_names()?;
     let readme_html = repo
-        .readme()
+        .readme(&current_ref)
         .map(|raw| markdown::render(&raw, &repo.name, &current_ref.name));
 
     render_html(&AboutPage {

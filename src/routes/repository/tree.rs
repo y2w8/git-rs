@@ -30,7 +30,7 @@ pub async fn page(
     let repo = data.get_repo(&name)?;
     let current_ref = Ref::resolve(&repo, &query)?;
     let branch_names = repo.branch_names()?;
-    let kind = repo.resolve_path(&current_ref, &filepath)?;
+    let kind = repo.resolve_path(&current_ref, query.id.as_deref(), &filepath)?;
 
     render_html(&TreePage {
         repo,
@@ -54,7 +54,7 @@ pub async fn raw(
     let repo = data.get_repo(&name)?;
     let current_ref = Ref::resolve(&repo, &query)?;
 
-    match repo.read_raw_blob(&current_ref, &path)? {
+    match repo.read_raw_blob(&current_ref, query.id.as_deref(), &path)? {
         Some(bytes) => {
             let mime = mime_guess::from_path(&path).first_or_text_plain();
             Ok(HttpResponse::Ok().content_type(mime.as_ref()).body(bytes))

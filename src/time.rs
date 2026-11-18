@@ -36,24 +36,32 @@ impl Time {
     }
 
     pub fn format(&self) -> String {
-        let dt: DateTime<Utc> = Utc.timestamp_opt(self.gix.seconds, 0).unwrap();
-        let offset = FixedOffset::east_opt(self.gix.offset).unwrap();
+        let dt: DateTime<Utc> = Utc
+            .timestamp_opt(self.gix.seconds, 0)
+            .single()
+            .unwrap_or_default();
+        let offset = FixedOffset::east_opt(self.gix.offset)
+            .or_else(|| FixedOffset::east_opt(0))
+            .unwrap();
         let local = dt.with_timezone(&offset);
         local.format("%Y-%m-%d %H:%M:%S %z").to_string()
     }
 
     pub fn format_rfc(&self, writer: &mut Writer<BytesMut>) {
-        let dt: DateTime<Utc> = Utc.timestamp_opt(self.gix.seconds, 0).unwrap();
-        let offset = FixedOffset::east_opt(self.gix.offset).unwrap();
-        let local = dt.with_timezone(&offset);
-        writer
-            .write_all(
-                local
-                    .format("%a, %d %b %Y %H:%M:%S %z")
-                    .to_string()
-                    .as_bytes(),
-            )
+        let dt: DateTime<Utc> = Utc
+            .timestamp_opt(self.gix.seconds, 0)
+            .single()
+            .unwrap_or_default();
+        let offset = FixedOffset::east_opt(self.gix.offset)
+            .or_else(|| FixedOffset::east_opt(0))
             .unwrap();
+        let local = dt.with_timezone(&offset);
+        let _ = writer.write_all(
+            local
+                .format("%a, %d %b %Y %H:%M:%S %z")
+                .to_string()
+                .as_bytes(),
+        );
     }
 
     pub fn format_relative(&self) -> (String, Recency) {
@@ -62,7 +70,7 @@ impl Time {
 }
 
 pub fn format_relative(seconds: i64) -> (String, Recency) {
-    let then = Utc.timestamp_opt(seconds, 0).unwrap();
+    let then = Utc.timestamp_opt(seconds, 0).single().unwrap_or_default();
     let now = Utc::now();
     let diff = now.signed_duration_since(then);
 

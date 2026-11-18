@@ -59,9 +59,18 @@ impl Repository {
         self.gix.to_thread_local()
     }
 
-    pub fn readme(&self) -> Option<String> {
+    pub fn readme(&self, current_ref: &Ref) -> Option<String> {
         let gix_repo = self.gix();
-        let tree = gix_repo.head().ok()?.peel_to_commit().ok()?.tree().ok()?;
+        let tree = Self::root_tree(&gix_repo, current_ref, None)
+            .or_else(|_| {
+                gix_repo
+                    .head()
+                    .ok()
+                    .and_then(|mut h| h.peel_to_commit().ok())
+                    .and_then(|c| c.tree().ok())
+                    .context("no head tree")
+            })
+            .ok()?;
 
         for entry in tree.iter().flatten() {
             if entry
@@ -83,16 +92,10 @@ impl Repository {
         commit: &Option<String>,
     ) -> Result<(Vec<u8>, String), anyhow::Error> {
         let gix_repo = self.gix();
-        let (tree, filename) = if let Some(commit) = commit {
-            (
-                self.find_commit(&gix_repo, commit)?.gix.tree()?,
-                format!("{commit}.tar.gz"),
-            )
-        } else {
-            (
-                Self::root_tree(&gix_repo, current_ref)?,
-                format!("{}.tar.gz", current_ref.name.replace('/', "-")),
-            )
+        let tree = Self::root_tree(&gix_repo, current_ref, commit.as_deref())?;
+        let filename = match commit {
+            Some(c) => format!("{c}.tar.gz"),
+            None => format!("{}.tar.gz", current_ref.name.replace('/', "-")),
         };
 
         let encoder = GzEncoder::new(Vec::new(), Compression::default());
@@ -137,9 +140,14 @@ impl Repository {
         Ok(())
     }
 
-    pub fn resolve_path(&self, current_ref: &Ref, path: &str) -> anyhow::Result<PathView> {
+    pub fn resolve_path(
+        &self,
+        current_ref: &Ref,
+        commit_id: Option<&str>,
+        path: &str,
+    ) -> anyhow::Result<PathView> {
         let gix_repo = self.gix();
-        let root_tree = Self::root_tree(&gix_repo, current_ref)?;
+        let root_tree = Self::root_tree(&gix_repo, current_ref, commit_id)?;
         let path = path.trim_matches('/');
 
         if path.is_empty() {
@@ -174,14 +182,19 @@ impl Repository {
         }
     }
 
-    pub fn read_raw_blob(&self, current_ref: &Ref, path: &str) -> anyhow::Result<Option<Vec<u8>>> {
+    pub fn read_raw_blob(
+        &self,
+        current_ref: &Ref,
+        commit_id: Option<&str>,
+        path: &str,
+    ) -> anyhow::Result<Option<Vec<u8>>> {
         let path = path.trim_matches('/');
         if path.is_empty() {
             return Ok(None);
         }
 
         let gix_repo = self.gix();
-        let root_tree = Self::root_tree(&gix_repo, current_ref)?;
+        let root_tree = Self::root_tree(&gix_repo, current_ref, commit_id)?;
         let entry = Self::lookup_entry(&root_tree, path)?;
 
         match entry.mode().kind() {
@@ -200,7 +213,12 @@ impl Repository {
     fn root_tree<'a>(
         gix_repo: &'a gix::Repository,
         current_ref: &Ref,
+        commit_id: Option<&str>,
     ) -> anyhow::Result<gix::Tree<'a>> {
+        if let Some(id) = commit_id {
+            let oid = id.parse::<gix::ObjectId>()?;
+            return Ok(gix_repo.find_commit(oid)?.tree()?);
+        }
         gix_repo
             .find_reference(&current_ref.name)?
             .peel_to_tree()

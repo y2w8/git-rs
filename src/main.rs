@@ -102,4 +102,31 @@ mod tests {
         assert!(!commits[0].branch_tips(&repo).unwrap().is_empty());
         assert!(start.elapsed().as_millis() < 100);
     }
+
+    #[test]
+    fn resolve_path_supports_explicit_commit_id() {
+        let repo = Repository::open(Path::new(env!("CARGO_MANIFEST_DIR"))).unwrap();
+        let current_ref = Ref {
+            name: repo.head_branch_name().unwrap(),
+            is_head: true,
+        };
+        let gix_repo = repo.gix();
+        let (commits, _) = repo.commits(&gix_repo, &current_ref, 0, 2, None).unwrap();
+        let oldest = commits.last().unwrap();
+
+        let view = repo
+            .resolve_path(&current_ref, Some(&oldest.id), "Cargo.toml")
+            .unwrap();
+        assert!(matches!(view, crate::git::tree::PathView::Blob(_)));
+    }
+
+    #[test]
+    fn markdown_escapes_attribute_injections_in_media() {
+        let md = "![demo & test](https://github.com/user-attachments/assets/1234?a=1&b=2)";
+        let html = markdown::render(md, "git-rs", "main");
+        assert!(html.contains(r#"alt="demo &amp; test""#));
+        assert!(
+            html.contains(r#"src="https://github.com/user-attachments/assets/1234?a=1&amp;b=2""#)
+        );
+    }
 }

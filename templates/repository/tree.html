@@ -10,12 +10,7 @@
   {{ macros::repo_tabs(repo, current_ref, query, "tree") }}
 {% endblock %}
 
-{% decl parameters %}
-{% if !current_ref.is_head %}
-{% let parameters %}?h={{ current_ref.name }}{% endlet %}
-{% else %}
-{% let parameters = "".to_string() %}
-{% endif %}
+{% let parameters = query.id_or_head_param() %}
 
 {% block breadcrumb %}
   <div class="tree-breadcrumb">

@@ -14,7 +14,7 @@ impl GitSignature {
         GitSignature {
             name: sig.name.to_string(),
             email: sig.email.to_string(),
-            time: Time::new(sig.time().unwrap()),
+            time: Time::new(sig.time().unwrap_or_default()),
         }
     }
 
